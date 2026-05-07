@@ -224,6 +224,13 @@ svg#svg { position:absolute; top:0; left:0; overflow:visible; pointer-events:non
   padding:8px 6px; border-bottom:1px solid var(--border);
 }
 .val-row:last-child { border-bottom:none; }
+.val-row.total {
+  background:#f2f4f8;
+  border-radius:8px;
+  margin-top:6px;
+}
+.val-row.total .val-label,
+.val-row.total .val-value { font-weight:700; }
 .val-label { font-size:14px; color:var(--text); }
 .val-level-0 .val-label { font-weight:700; }
 .val-level-1 .val-label { font-weight:600; }
@@ -831,13 +838,17 @@ function renderValues() {
   valuesInner.innerHTML = '';
   const cleanText = (text) => text.replace(/^\d+\.\s*/,'');
   const fixedValues = {
-    q1: 'R$ 300',
+    q1: 'R$ 350',
     f1: 'R$ 350',
     n1: 'R$ 350',
-    p1: 'R$ 350',
+    p1: 'R$ 400',
     d1: 'R$ 200',
     c1: 'R$ 300'
   };
+  const extras = [
+    { label: 'API Oficial + Site institucional (Concluido, falta apenas pagar)', value: 'R$ 500' }
+  ];
+  const toNumber = (value) => Number(String(value).replace(/[^0-9]/g, '')) || 0;
   const wrap = document.createElement('div');
   wrap.className = 'val-wrap';
 
@@ -865,17 +876,60 @@ function renderValues() {
     wrap.appendChild(row);
   });
 
-  const extraRow = document.createElement('div');
-  extraRow.className = 'val-row val-level-1';
-  const extraLabel = document.createElement('div');
-  extraLabel.className = 'val-label';
-  extraLabel.textContent = 'API Oficial + Site institucional (Concluido, falta apenas pagar)';
-  const extraValue = document.createElement('div');
-  extraValue.className = 'val-value';
-  extraValue.textContent = 'R$ 500';
-  extraRow.appendChild(extraLabel);
-  extraRow.appendChild(extraValue);
-  wrap.appendChild(extraRow);
+  extras.forEach((item) => {
+    const extraRow = document.createElement('div');
+    extraRow.className = 'val-row val-level-1';
+    const extraLabel = document.createElement('div');
+    extraLabel.className = 'val-label';
+    extraLabel.textContent = item.label;
+    const extraValue = document.createElement('div');
+    extraValue.className = 'val-value';
+    extraValue.textContent = item.value;
+    extraRow.appendChild(extraLabel);
+    extraRow.appendChild(extraValue);
+    wrap.appendChild(extraRow);
+  });
+
+  const subtotal = Object.values(fixedValues).reduce((sum, v) => sum + toNumber(v), 0)
+    + extras.reduce((sum, item) => sum + toNumber(item.value), 0);
+  const discount = 150;
+  const total = Math.max(subtotal - discount, 0);
+
+  const subtotalRow = document.createElement('div');
+  subtotalRow.className = 'val-row total';
+  const subtotalLabel = document.createElement('div');
+  subtotalLabel.className = 'val-label';
+  subtotalLabel.textContent = 'Subtotal';
+  const subtotalValue = document.createElement('div');
+  subtotalValue.className = 'val-value';
+  subtotalValue.textContent = `R$ ${subtotal}`;
+  subtotalRow.appendChild(subtotalLabel);
+  subtotalRow.appendChild(subtotalValue);
+  wrap.appendChild(subtotalRow);
+
+  const discountRow = document.createElement('div');
+  discountRow.className = 'val-row';
+  const discountLabel = document.createElement('div');
+  discountLabel.className = 'val-label';
+  discountLabel.textContent = 'Desconto pacote completo';
+  const discountValue = document.createElement('div');
+  discountValue.className = 'val-value';
+  discountValue.textContent = `- R$ ${discount}`;
+  discountRow.appendChild(discountLabel);
+  discountRow.appendChild(discountValue);
+  wrap.appendChild(discountRow);
+
+  const totalRow = document.createElement('div');
+  totalRow.className = 'val-row total';
+  const totalLabel = document.createElement('div');
+  totalLabel.className = 'val-label';
+  totalLabel.textContent = 'Total com desconto';
+  const totalValue = document.createElement('div');
+  totalValue.className = 'val-value';
+  totalValue.textContent = `R$ ${total}`;
+  totalRow.appendChild(totalLabel);
+  totalRow.appendChild(totalValue);
+  wrap.appendChild(totalRow);
 
   valuesInner.appendChild(wrap);
 }
