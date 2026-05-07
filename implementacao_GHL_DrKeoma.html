@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Implementação — GHL Dr Keoma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+:root {
+  --bg:     #f4f5f7;
+  --white:  #ffffff;
+  --border: #d7dbe2;
+  --text:   #1f2430;
+  --muted:  #6b7280;
+
+  --r0:  #1f2430; /* root */
+}
+
+body {
+  font-family: 'Source Sans 3', sans-serif;
+  background: var(--bg);
+  width:100vw; height:100vh;
+  overflow:hidden; user-select:none;
+}
+
+/* TOOLBAR */
+#tb {
+  position:fixed; top:0; left:0; right:0; height:48px;
+  background:var(--white); border-bottom:1px solid var(--border);
+  display:flex; align-items:center; padding:0 20px; gap:10px;
+  z-index:1000; box-shadow:0 1px 3px rgba(0,0,0,.04);
+}
+.tb-logo { font-size:13px; font-weight:700; color:var(--text); letter-spacing:-.3px; }
+.tb-sub  { font-size:11px; color:var(--muted); font-weight:400; margin-left:2px; }
+.sep     { flex:1; }
+.tb-sep  { width:1px; height:20px; background:var(--border); }
+.btn {
+  height:32px; padding:0 14px; border:1px solid var(--border);
+  border-radius:7px; background:var(--white);
+  font-family:'Source Sans 3',sans-serif; font-size:12px; font-weight:600;
+  color:var(--text); cursor:pointer;
+  transition:background .12s, border-color .12s;
+  display:flex; align-items:center; gap:5px;
+}
+.btn:hover { background:#f2f4f8; border-color:#cdd1da; }
+.btn:disabled { opacity:.55; cursor:not-allowed; }
+.btn.active { background:#eef1f6; border-color:#c7ccd7; }
+.btn.pri { background:var(--text); color:#fff; border-color:var(--text); }
+.btn.pri:hover { background:#2d3142; }
+.hint { font-size:11px; color:var(--muted); }
+
+/* VIEWPORT */
+#vp {
+  position:absolute; top:48px; left:0; right:0; bottom:0;
+  overflow:hidden; cursor:grab;
+}
+#vp.pan { cursor:grabbing; }
+#canvas { position:absolute; transform-origin:0 0; }
+svg#svg { position:absolute; top:0; left:0; overflow:visible; pointer-events:none; }
+
+/* NODES */
+.nd {
+  position:absolute; cursor:pointer;
+}
+.nd:hover .lbl { filter:brightness(.96); }
+.nd.sel .lbl { box-shadow:0 0 0 2.5px var(--c1) !important; }
+
+.lbl {
+  display:block;
+  border-radius:9px;
+  font-size:13px; font-weight:500;
+  line-height:1.5; white-space:normal;
+  word-break:break-word;
+  transition:filter .12s, box-shadow .12s;
+}
+.lbl[contenteditable="true"] {
+  outline:2px solid #9aa3b2 !important;
+  cursor:text; white-space:pre-wrap; border-radius:9px;
+}
+
+/* root */
+.nd-0 .lbl {
+  background:var(--r0); color:#fff;
+  font-size:13px; font-weight:700;
+  padding:13px 20px; border-radius:12px;
+  max-width:230px; letter-spacing:-.2px;
+  box-shadow:0 4px 20px rgba(26,29,35,.18);
+}
+
+/* L1 */
+.nd-1 .lbl {
+  font-size:13px; font-weight:600;
+  padding:9px 18px; border-radius:9px;
+  max-width:230px; letter-spacing:-.1px;
+  box-shadow:0 2px 10px rgba(0,0,0,.08);
+  color:#1f2430;
+}
+
+/* L2 */
+.nd-2 .lbl {
+  font-size:12.5px; font-weight:500;
+  padding:5px 12px; border-radius:8px;
+  max-width:220px;
+  box-shadow:0 1px 4px rgba(0,0,0,.06);
+}
+
+/* L3 */
+.nd-3 .lbl {
+  font-size:12px; font-weight:400;
+  padding:4px 10px; border-radius:7px;
+  max-width:210px;
+}
+
+/* badge colapsar */
+.badge {
+  position:absolute; right:-11px; top:50%;
+  transform:translateY(-50%);
+  width:20px; height:20px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:700;
+  border:2px solid var(--white);
+  box-shadow:0 1px 5px rgba(0,0,0,.15);
+  cursor:pointer; z-index:5;
+  color:#fff;
+  background:#4b5563;
+}
+
+/* CONTEXT MENU */
+#ctx {
+  position:fixed; background:var(--white);
+  border:1px solid var(--border); border-radius:10px;
+  box-shadow:0 8px 28px rgba(0,0,0,.1);
+  padding:5px 0; z-index:3000; display:none; min-width:175px;
+}
+.ci {
+  padding:8px 16px; font-size:12px; font-weight:500;
+  cursor:pointer; color:var(--text); font-family:'Source Sans 3',sans-serif;
+  display:flex; align-items:center; gap:8px;
+}
+.ci:hover { background:#f7f8fa; }
+.ci.red { color:#dc2626; }
+.csep { height:1px; background:var(--border); margin:3px 0; }
+
+/* ZOOM */
+#zoom {
+  position:fixed; bottom:18px; right:18px;
+  background:var(--white); border:1px solid var(--border);
+  border-radius:9px; padding:5px 10px;
+  font-size:12px; color:var(--muted);
+  display:flex; align-items:center; gap:7px;
+  box-shadow:0 2px 8px rgba(0,0,0,.07);
+}
+.zb {
+  width:26px; height:26px; border:1px solid var(--border);
+  border-radius:6px; background:var(--white); cursor:pointer;
+  font-size:14px; display:flex; align-items:center; justify-content:center;
+  color:var(--text); font-family:'Source Sans 3',sans-serif;
+}
+.zb:hover { background:#f2f4f8; }
+
+/* OUTLINE MODE */
+#outline {
+  position:absolute; top:48px; left:0; right:0; bottom:0;
+  overflow-y:auto; padding:40px 60px; background:var(--bg);
+  display:none;
+  --zoom:1;
+}
+#outline.active { display:block; }
+.view-inner { zoom:var(--zoom); }
+.ol-item {
+  margin-bottom:8px;
+}
+.ol-node {
+  display:flex; align-items:flex-start; gap:8px;
+  padding:6px 12px; border-radius:8px;
+  transition:background .12s;
+  cursor:pointer;
+}
+.ol-node:hover { background:#f2f4f8; }
+.ol-toggle {
+  width:18px; height:18px; flex-shrink:0;
+  border-radius:4px; border:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center;
+  font-size:10px; font-weight:700;
+  cursor:pointer; background:var(--white);
+  margin-top:1px;
+}
+.ol-toggle:hover { background:#e8ebf0; }
+.ol-text {
+  flex:1; font-size:14px; font-weight:500;
+  color:var(--text); line-height:1.6;
+}
+.ol-children {
+  margin-left:26px; margin-top:4px;
+}
+.ol-children.collapsed { display:none; }
+
+/* Cores por nível no outline */
+.ol-node.lv-0 .ol-text { font-size:16px; font-weight:700; color:var(--r0); }
+.ol-node.lv-1 .ol-text { font-size:15px; font-weight:600; }
+.ol-node.lv-2 .ol-text { font-size:14px; font-weight:500; }
+.ol-node.lv-3 .ol-text { font-size:13px; font-weight:400; color:var(--muted); }
+
+/* VALUES MODE */
+#values {
+  position:absolute; top:48px; left:0; right:0; bottom:0;
+  overflow:auto; padding:40px 60px; background:var(--bg);
+  display:none;
+  --zoom:1;
+}
+#values.active { display:block; }
+.val-wrap {
+  background:var(--white); border:1px solid var(--border);
+  border-radius:12px; padding:16px 18px;
+  box-shadow:0 1px 4px rgba(0,0,0,.05);
+}
+.val-row {
+  display:grid; grid-template-columns: 1fr 160px;
+  gap:14px; align-items:center;
+  padding:8px 6px; border-bottom:1px solid var(--border);
+}
+.val-row:last-child { border-bottom:none; }
+.val-label { font-size:14px; color:var(--text); }
+.val-level-0 .val-label { font-weight:700; }
+.val-level-1 .val-label { font-weight:600; }
+.val-level-2 .val-label { font-weight:500; }
+.val-level-3 .val-label { font-weight:400; color:var(--muted); }
+.val-input {
+  height:30px; border:1px solid var(--border);
+  border-radius:6px; padding:0 10px;
+  font-family:'Source Sans 3',sans-serif; font-size:13px;
+  color:var(--text); background:var(--white);
+}
+.val-input:focus { outline:2px solid #cfd4de; border-color:#cfd4de; }
+.val-value {
+  font-size:14px; font-weight:600;
+  color:var(--text);
+  text-align:right;
+}
+
+@media print {
+  #tb, #zoom, #vp, #values { display:none !important; }
+  #outline { display:block !important; position:static; padding:0; }
+  body { background:#fff; }
+}
+</style>
+</head>
+<body>
+
+<div id="tb">
+  <span class="tb-logo">GHL Dr Keoma</span>
+  <span class="tb-sub">— Advocacia Caldeira Paizante</span>
+  <span class="sep"></span>
+  <button class="btn" id="bmap">Modo Mapa</button>
+  <button class="btn" id="btext">Modo Texto</button>
+  <button class="btn" id="bval">Valores</button>
+  <div class="tb-sep"></div>
+  <span class="hint">Duplo clique = editar · Clique direito = opções</span>
+  <div class="tb-sep"></div>
+  <button class="btn" id="bexp">Expandir</button>
+  <button class="btn" id="bcol">Recolher</button>
+  <div class="tb-sep"></div>
+  <button class="btn" id="bprint">Imprimir texto</button>
+</div>
+
+<div id="vp">
+  <div id="canvas"><svg id="svg"></svg></div>
+</div>
+
+<div id="outline"><div class="view-inner" id="outlineInner"></div></div>
+
+<div id="values"><div class="view-inner" id="valuesInner"></div></div>
+
+<div id="ctx">
+  <div class="ci" id="ci-child">+ Adicionar sub-item</div>
+  <div class="ci" id="ci-sib">↕ Adicionar irmão</div>
+  <div class="csep"></div>
+  <div class="ci" id="ci-edit">✎ Editar texto</div>
+  <div class="ci" id="ci-tog">⊟ Recolher / Expandir</div>
+  <div class="csep"></div>
+  <div class="ci red" id="ci-del">⊗ Deletar</div>
+</div>
+
+<div id="zoom">
+  <button class="zb" id="zm">−</button>
+  <span id="zl">90%</span>
+  <button class="zb" id="zp">+</button>
+  <button class="zb" id="zf">⌂</button>
+</div>
+
+<script>
+// ══════════ PALETAS ══════════
+const PAL = [
+  { // neutro 1
+    l1bg:'#dde3ee', l1tx:'#1f2430',
+    l2bg:'#f0f3f8', l2tx:'#1f2430', l2br:'#c5ccd8',
+    l3bg:'#f8fafc', l3tx:'#495166', l3br:'#d7dde7',
+    line:'#8f99ab'
+  },
+  { // neutro 2
+    l1bg:'#dde3ee', l1tx:'#1f2430',
+    l2bg:'#f0f3f8', l2tx:'#1f2430', l2br:'#c5ccd8',
+    l3bg:'#f8fafc', l3tx:'#495166', l3br:'#d7dde7',
+    line:'#8f99ab'
+  },
+  { // neutro 3
+    l1bg:'#dde3ee', l1tx:'#1f2430',
+    l2bg:'#f0f3f8', l2tx:'#1f2430', l2br:'#c5ccd8',
+    l3bg:'#f8fafc', l3tx:'#495166', l3br:'#d7dde7',
+    line:'#8f99ab'
+  },
+  { // neutro 4
+    l1bg:'#dde3ee', l1tx:'#1f2430',
+    l2bg:'#f0f3f8', l2tx:'#1f2430', l2br:'#c5ccd8',
+    l3bg:'#f8fafc', l3tx:'#495166', l3br:'#d7dde7',
+    line:'#8f99ab'
+  },
+  { // neutro 5
+    l1bg:'#dde3ee', l1tx:'#1f2430',
+    l2bg:'#f0f3f8', l2tx:'#1f2430', l2br:'#c5ccd8',
+    l3bg:'#f8fafc', l3tx:'#495166', l3br:'#d7dde7',
+    line:'#8f99ab'
+  }
+];
+
+// ══════════ DATA ══════════
+const DATA = {
+  id:'root',
+  text:'Implementação GHL\nDr Keoma',
+  collapsed:false,
+  children:[
+
+    // ── 1. QUALIFICAÇÃO AUTOMÁTICA ──
+    { id:'q1', text:'1. Qualificação Automática', collapsed:false, pal:0, children:[
+      { id:'q1a', text:'Workflow: Menu Inicial', collapsed:true, children:[
+        { id:'q1a1', text:'Trigger: Novo contato WhatsApp', collapsed:true, children:[] },
+        { id:'q1a2', text:'Mensagem boas-vindas + menu', collapsed:true, children:[] },
+        { id:'q1a3', text:'Opção 1: Homologação divórcio', collapsed:true, children:[] },
+        { id:'q1a4', text:'Opção 2: Transcrição casamento', collapsed:true, children:[] },
+        { id:'q1a5', text:'Opção 3: Saída fiscal', collapsed:true, children:[] },
+        { id:'q1a6', text:'Opção 4: Outros serviços', collapsed:true, children:[] },
+      ]},
+      { id:'q1b', text:'Campos Customizados', collapsed:true, children:[
+        { id:'q1b1', text:'servico_interesse (dropdown)', collapsed:true, children:[] },
+        { id:'q1b2', text:'status_divorcio (sim/não)', collapsed:true, children:[] },
+        { id:'q1b3', text:'local_divorcio (texto)', collapsed:true, children:[] },
+        { id:'q1b4', text:'nivel_urgencia (dropdown)', collapsed:true, children:[] },
+        { id:'q1b5', text:'data_qualificacao (date)', collapsed:true, children:[] },
+      ]},
+      { id:'q1c', text:'Perguntas de Qualificação', collapsed:true, children:[
+        { id:'q1c1', text:'P1: Já está divorciado? (Sim/Não)', collapsed:true, children:[] },
+        { id:'q1c2', text:'P2: Onde foi o divórcio? (Cidade/Estado)', collapsed:true, children:[] },
+        { id:'q1c3', text:'P3: Tem urgência? (Alta/Média/Baixa)', collapsed:true, children:[] },
+        { id:'q1c4', text:'Salvar respostas nos campos custom', collapsed:true, children:[] },
+      ]},
+      { id:'q1d', text:'Sistema de Tags', collapsed:true, children:[
+        { id:'q1d1', text:'Tag: lead_qualificado', collapsed:true, children:[] },
+        { id:'q1d2', text:'Tag: lead_inviavel', collapsed:true, children:[] },
+        { id:'q1d3', text:'Tag: servico_[tipo]', collapsed:true, children:[] },
+        { id:'q1d4', text:'Tag: urgencia_[nivel]', collapsed:true, children:[] },
+        { id:'q1d5', text:'Aplicação manual (fase 1)', collapsed:true, children:[] },
+        { id:'q1d6', text:'Futura automação por IA', collapsed:true, children:[] },
+      ]},
+    ]},
+
+    // ── 2. FOLLOW-UP AUTOMÁTICO ──
+    { id:'f1', text:'3. Follow-up Automático', collapsed:false, pal:1, children:[
+      { id:'f1a', text:'Workflow: Follow-up 4h', collapsed:true, children:[
+        { id:'f1a1', text:'Trigger: 4h sem resposta', collapsed:true, children:[] },
+        { id:'f1a2', text:'Condição: status_conversa = aberta', collapsed:true, children:[] },
+        { id:'f1a3', text:'Condição: NÃO tem tag "atendimento_finalizado"', collapsed:true, children:[] },
+        { id:'f1a4', text:'Enviar mensagem padrão 1', collapsed:true, children:[] },
+        { id:'f1a5', text:'Tag: followup_4h_enviado', collapsed:true, children:[] },
+      ]},
+      { id:'f1b', text:'Workflow: Follow-up 1D', collapsed:true, children:[
+        { id:'f1b1', text:'Trigger: 1 dia (7h) sem resposta', collapsed:true, children:[] },
+        { id:'f1b2', text:'Condição: tem tag "followup_4h_enviado"', collapsed:true, children:[] },
+        { id:'f1b3', text:'Condição: status_conversa = aberta', collapsed:true, children:[] },
+        { id:'f1b4', text:'Enviar mensagem padrão 2', collapsed:true, children:[] },
+        { id:'f1b5', text:'Tag: followup_1d_enviado', collapsed:true, children:[] },
+      ]},
+      { id:'f1c', text:'Workflow: Follow-up 3D', collapsed:true, children:[
+        { id:'f1c1', text:'Trigger: 3 dias (19h) sem resposta', collapsed:true, children:[] },
+        { id:'f1c2', text:'Condição: tem tag "followup_1d_enviado"', collapsed:true, children:[] },
+        { id:'f1c3', text:'Condição: status_conversa = aberta', collapsed:true, children:[] },
+        { id:'f1c4', text:'Enviar mensagem padrão 3 (última)', collapsed:true, children:[] },
+        { id:'f1c5', text:'Tag: followup_3d_enviado', collapsed:true, children:[] },
+        { id:'f1c6', text:'Move para pipeline "Retrabalho/Nutrição"', collapsed:true, children:[] },
+      ]},
+      { id:'f1d', text:'Templates de Mensagens', collapsed:true, children:[
+        { id:'f1d1', text:'Template 4h: lembrete gentil', collapsed:true, children:[] },
+        { id:'f1d2', text:'Template 1D: reforço de valor', collapsed:true, children:[] },
+        { id:'f1d3', text:'Template 3D: última tentativa', collapsed:true, children:[] },
+        { id:'f1d4', text:'Todas com personalização por nome', collapsed:true, children:[] },
+      ]},
+      { id:'f1e', text:'Exceções e Filtros', collapsed:true, children:[
+        { id:'f1e1', text:'Não enviar se: tag "atendimento_finalizado"', collapsed:true, children:[] },
+        { id:'f1e2', text:'Não enviar se: pipeline = "Ganho"', collapsed:true, children:[] },
+        { id:'f1e3', text:'Não enviar se: lead inviável', collapsed:true, children:[] },
+        { id:'f1e4', text:'Respeitar horário comercial (7h-19h)', collapsed:true, children:[] },
+      ]},
+    ]},
+
+    // ── 3. NUTRIÇÃO/REATIVAÇÃO ──
+    { id:'n1', text:'5. Nutrição/Reativação', collapsed:false, pal:2, children:[
+      { id:'n1a', text:'Workflow: Nutrição 15D', collapsed:true, children:[
+        { id:'n1a1', text:'Trigger: 15 dias sem decisão', collapsed:true, children:[] },
+        { id:'n1a2', text:'Condição: NÃO está em "Ganho"', collapsed:true, children:[] },
+        { id:'n1a3', text:'Conteúdo: explicação do serviço', collapsed:true, children:[] },
+        { id:'n1a4', text:'Tag: nutricao_15d_enviado', collapsed:true, children:[] },
+      ]},
+      { id:'n1b', text:'Workflow: Nutrição 18D', collapsed:true, children:[
+        { id:'n1b1', text:'Trigger: 18 dias às 7h', collapsed:true, children:[] },
+        { id:'n1b2', text:'Conteúdo: importância de resolver', collapsed:true, children:[] },
+        { id:'n1b3', text:'Tag: nutricao_18d_enviado', collapsed:true, children:[] },
+      ]},
+      { id:'n1c', text:'Workflow: Nutrição 21D', collapsed:true, children:[
+        { id:'n1c1', text:'Trigger: 21 dias às 19h', collapsed:true, children:[] },
+        { id:'n1c2', text:'Conteúdo: exemplos práticos + cases', collapsed:true, children:[] },
+        { id:'n1c3', text:'Tag: nutricao_21d_enviado', collapsed:true, children:[] },
+      ]},
+      { id:'n1d', text:'Workflow: Nutrição 60D', collapsed:true, children:[
+        { id:'n1d1', text:'Trigger: 60 dias (reativação final)', collapsed:true, children:[] },
+        { id:'n1d2', text:'Conteúdo: oferta especial / novidades', collapsed:true, children:[] },
+        { id:'n1d3', text:'Tag: nutricao_60d_enviado', collapsed:true, children:[] },
+        { id:'n1d4', text:'Se não responder: arquivar', collapsed:true, children:[] },
+      ]},
+      { id:'n1e', text:'Biblioteca de Conteúdos', collapsed:true, children:[
+        { id:'n1e1', text:'Explicação: como funciona cada serviço', collapsed:true, children:[] },
+        { id:'n1e2', text:'Urgência: prazos legais e consequências', collapsed:true, children:[] },
+        { id:'n1e3', text:'Social proof: depoimentos e cases', collapsed:true, children:[] },
+        { id:'n1e4', text:'FAQ: dúvidas mais comuns', collapsed:true, children:[] },
+      ]},
+    ]},
+
+    // ── 4. PIPELINE AUTOMÁTICO ──
+    { id:'p1', text:'7. Pipeline Automático', collapsed:false, pal:3, children:[
+      { id:'p1a', text:'Pipeline: Comercial', collapsed:true, children:[
+        { id:'p1a1', text:'Stage: Base (entrada)', collapsed:true, children:[] },
+        { id:'p1a2', text:'Stage: Primeiro Contato', collapsed:true, children:[] },
+        { id:'p1a3', text:'Stage: Em Qualificação', collapsed:true, children:[] },
+        { id:'p1a4', text:'Stage: Reunião Agendada', collapsed:true, children:[] },
+        { id:'p1a5', text:'Stage: Proposta/Negociação (manual)', collapsed:true, children:[] },
+        { id:'p1a6', text:'Stage: Aguardando Documentação (manual)', collapsed:true, children:[] },
+        { id:'p1a7', text:'Stage: Aguardando Assinatura (manual)', collapsed:true, children:[] },
+        { id:'p1a8', text:'Stage: Aguardando Pagamento (manual)', collapsed:true, children:[] },
+        { id:'p1a9', text:'Stage: Ganho', collapsed:true, children:[] },
+        { id:'p1a10', text:'Stage: Retrabalho/Nutrição', collapsed:true, children:[] },
+      ]},
+      { id:'p1b', text:'Automações de Movimentação', collapsed:true, children:[
+        { id:'p1b1', text:'Base → Primeiro Contato (ao responder)', collapsed:true, children:[] },
+        { id:'p1b2', text:'Primeiro Contato → Qualificação (ao escolher serviço)', collapsed:true, children:[] },
+        { id:'p1b3', text:'Qualificação → Reunião Agendada (ao agendar)', collapsed:true, children:[] },
+        { id:'p1b4', text:'Qualquer → Retrabalho (após 3 follow-ups)', collapsed:true, children:[] },
+      ]},
+      { id:'p1c', text:'Campos de Pipeline', collapsed:true, children:[
+        { id:'p1c1', text:'valor_proposta (currency)', collapsed:true, children:[] },
+        { id:'p1c2', text:'data_reuniao (datetime)', collapsed:true, children:[] },
+        { id:'p1c3', text:'responsavel (user)', collapsed:true, children:[] },
+        { id:'p1c4', text:'observacoes (textarea)', collapsed:true, children:[] },
+      ]},
+      { id:'p1d', text:'Notificações Automáticas', collapsed:true, children:[
+        { id:'p1d1', text:'Novo lead qualificado → notifica equipe', collapsed:true, children:[] },
+        { id:'p1d2', text:'Reunião agendada → lembra 1h antes', collapsed:true, children:[] },
+        { id:'p1d3', text:'Documento pendente → lembra após 2 dias', collapsed:true, children:[] },
+        { id:'p1d4', text:'Pagamento pendente → lembra diariamente', collapsed:true, children:[] },
+      ]},
+    ]},
+
+    // ── 5. DASHBOARDS E RELATÓRIOS ──
+    { id:'d1', text:'Dashboards e Relatórios', collapsed:false, pal:3, children:[
+      { id:'d1a', text:'Métricas de Conversão', collapsed:true, children:[
+        { id:'d1a1', text:'Taxa conversão por etapa', collapsed:true, children:[] },
+        { id:'d1a2', text:'Tempo médio em cada stage', collapsed:true, children:[] },
+        { id:'d1a3', text:'Leads por origem/canal', collapsed:true, children:[] },
+      ]},
+      { id:'d1b', text:'Performance da Equipe', collapsed:true, children:[
+        { id:'d1b1', text:'Atendimentos por atendente', collapsed:true, children:[] },
+        { id:'d1b2', text:'Taxa de fechamento individual', collapsed:true, children:[] },
+        { id:'d1b3', text:'Tempo médio de resposta', collapsed:true, children:[] },
+      ]},
+      { id:'d1c', text:'Análise de Perdas', collapsed:true, children:[
+        { id:'d1c1', text:'Motivos de perda (tags)', collapsed:true, children:[] },
+        { id:'d1c2', text:'Etapas com maior abandono', collapsed:true, children:[] },
+        { id:'d1c3', text:'Oportunidades de melhoria', collapsed:true, children:[] },
+      ]},
+    ]},
+
+    // ── 6. CONFIGURAÇÕES TÉCNICAS ──
+    { id:'c1', text:'Configurações Técnicas', collapsed:false, pal:4, children:[
+      { id:'c1a', text:'WhatsApp Business API', collapsed:true, children:[
+        { id:'c1a1', text:'Verificar número no Meta BM', collapsed:true, children:[] },
+        { id:'c1a2', text:'Conectar ao GHL', collapsed:true, children:[] },
+        { id:'c1a3', text:'Templates aprovados pelo Meta', collapsed:true, children:[] },
+        { id:'c1a4', text:'Limite de mensagens (tier do número)', collapsed:true, children:[] },
+      ]},
+      { id:'c1c', text:'Fuso Horário', collapsed:true, children:[
+        { id:'c1c1', text:'Account Settings → America/Sao_Paulo', collapsed:true, children:[] },
+        { id:'c1c2', text:'Todos workflows respeitam fuso', collapsed:true, children:[] },
+        { id:'c1c3', text:'Horário comercial: 7h-19h', collapsed:true, children:[] },
+      ]},
+      { id:'c1d', text:'Permissões e Usuários', collapsed:true, children:[
+        { id:'c1d1', text:'Admin: acesso total', collapsed:true, children:[] },
+        { id:'c1d2', text:'Atendentes: apenas conversas', collapsed:true, children:[] },
+        { id:'c1d3', text:'Visualizadores: apenas relatórios', collapsed:true, children:[] },
+      ]},
+      { id:'c1e', text:'Mensagens Rápidas', collapsed:true, children:[
+        { id:'c1e1', text:'Saudação inicial', collapsed:true, children:[] },
+        { id:'c1e2', text:'Pedido de documentação', collapsed:true, children:[] },
+        { id:'c1e3', text:'Informações de pagamento', collapsed:true, children:[] },
+        { id:'c1e4', text:'Encerramento de atendimento', collapsed:true, children:[] },
+      ]},
+      { id:'c1f', text:'Integrações Externas', collapsed:true, children:[
+        { id:'c1f1', text:'Google Calendar (agendamentos)', collapsed:true, children:[] },
+      ]},
+    ]},
+
+  ]
+};
+
+// ══════════ LAYOUT ══════════
+const COL=258, PAD=6, OX=40, OY=60;
+
+function nodeH(text, lv) {
+  const fs = lv===0?13:lv===1?13:lv===2?12.5:12;
+  const maxW = 210;
+  const d=document.createElement('div');
+  d.style.cssText=`position:absolute;visibility:hidden;width:${maxW}px;font-size:${fs}px;font-family:'Source Sans 3',sans-serif;padding:${lv===0?'13px 20px':lv===1?'9px 18px':lv===2?'5px 12px':'4px 10px'};line-height:1.5;white-space:pre-wrap;word-break:break-word;`;
+  d.textContent=text;
+  document.body.appendChild(d);
+  const h=d.offsetHeight;
+  document.body.removeChild(d);
+  return Math.max(h,26);
+}
+
+function subtreeH(n) {
+  const h=nodeH(n.text, n._lv||0);
+  if(n.collapsed||!n.children||!n.children.length) return h;
+  const ch=n.children.reduce((s,c)=>s+subtreeH(c)+6,0)-6;
+  return Math.max(h,ch);
+}
+
+function layout(n, x, y, lv, palIdx, pid) {
+  n._lv=lv; n._x=x; n._h=nodeH(n.text,lv);
+  n._pal = n.pal!==undefined && n.pal!==null ? n.pal : palIdx;
+  n._pid=pid;
+  if(!n.collapsed && n.children && n.children.length) {
+    const cx=x+COL;
+    const tot=n.children.reduce((s,c)=>s+subtreeH(c)+6,0)-6;
+    let cy=y+n._h/2-tot/2;
+    n.children.forEach(c=>{
+      const sh=subtreeH(c);
+      layout(c,cx,cy+sh/2-nodeH(c.text,lv+1)/2,lv+1,n._pal,n.id);
+      cy+=sh+6;
+    });
+  }
+  n._y=y;
+}
+
+// ══════════ RENDER ══════════
+const canvas=document.getElementById('canvas');
+const svgEl =document.getElementById('svg');
+let nodeMap={}, selId=null, ctxId=null;
+
+function getStyle(n) {
+  if(n._lv===0) return { bg:'#1f2430', tx:'#fff', br:null, line:'#1f2430', badge:'#4b5563' };
+  const p=PAL[n._pal??0];
+  if(n._lv===1) return { bg:p.l1bg, tx:p.l1tx, br:null,    line:p.line, badge:'#4b5563' };
+  if(n._lv===2) return { bg:p.l2bg, tx:p.l2tx, br:p.l2br,  line:p.line, badge:'#4b5563' };
+  return               { bg:p.l3bg, tx:p.l3tx, br:p.l3br,  line:p.line, badge:'#4b5563' };
+}
+
+function lblWidth(n) {
+  const el=document.getElementById('e'+n.id);
+  if(!el) return 210;
+  return (el.querySelector('.lbl')||{offsetWidth:210}).offsetWidth;
+}
+
+function render() {
+  canvas.querySelectorAll('.nd').forEach(e=>e.remove());
+  svgEl.innerHTML='';
+  nodeMap={};
+  layout(DATA,OX,OY,0,0,null);
+
+  let mx=0,my=0;
+  function sz(n){ mx=Math.max(mx,n._x+260); my=Math.max(my,n._y+n._h+40); if(!n.collapsed)(n.children||[]).forEach(sz); }
+  sz(DATA);
+  canvas.style.width=(mx+80)+'px'; canvas.style.height=(my+80)+'px';
+  svgEl.setAttribute('width',mx+80); svgEl.setAttribute('height',my+80);
+
+  const nodes=[];
+  function drawNodes(n) {
+    const st=getStyle(n);
+    const el=document.createElement('div');
+    el.className='nd nd-'+n._lv+(n.id===selId?' sel':'');
+    el.id='e'+n.id;
+    el.style.left=n._x+'px'; el.style.top=n._y+'px';
+
+    const lbl=document.createElement('div');
+    lbl.className='lbl';
+    lbl.style.background=st.bg;
+    lbl.style.color=st.tx;
+    if(st.br) { lbl.style.border='1px solid '+st.br; }
+    lbl.textContent=n.text;
+    el.appendChild(lbl);
+
+    if(n.children&&n.children.length) {
+      const b=document.createElement('div');
+      b.className='badge';
+      b.style.background=st.badge;
+      b.textContent=n.collapsed?'+':'−';
+      b.title=n.collapsed?'Expandir':'Recolher';
+      b.onclick=e=>{e.stopPropagation();n.collapsed=!n.collapsed;render();};
+      el.appendChild(b);
+    }
+
+    el.onclick=e=>{e.stopPropagation();selId=n.id;render();};
+    el.ondblclick=e=>{e.stopPropagation();edit(n,lbl);};
+    el.oncontextmenu=e=>{e.preventDefault();ctxId=n.id;selId=n.id;render();openCtx(e);};
+    canvas.appendChild(el);
+    nodeMap[n.id]=n;
+    nodes.push(n);
+
+    if(!n.collapsed)(n.children||[]).forEach(drawNodes);
+  }
+  drawNodes(DATA);
+
+  function drawLines(n) {
+    if(!n._pid) return;
+    const p=nodeMap[n._pid];
+    const pel=document.getElementById('e'+p.id);
+    const nel=document.getElementById('e'+n.id);
+    if(!pel || !nel) return;
+
+    const st=getStyle(n);
+    const pad=8;
+    const sx=pel.offsetLeft + pel.offsetWidth + pad;
+    const sy=pel.offsetTop + pel.offsetHeight/2;
+    const ex=nel.offsetLeft - pad;
+    const ey=nel.offsetTop + nel.offsetHeight/2;
+    const mx=sx + (ex - sx) * 0.5;
+
+    const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d',`M${sx},${sy} C${mx},${sy} ${mx},${ey} ${ex},${ey}`);
+    path.setAttribute('fill','none');
+    path.setAttribute('stroke',st.line);
+    path.setAttribute('stroke-width',n._lv===1?2.2:n._lv===2?1.8:1.3);
+    path.setAttribute('stroke-opacity',n._lv===1?.75:.6);
+    path.setAttribute('stroke-linecap','round');
+    svgEl.appendChild(path);
+  }
+  nodes.forEach(drawLines);
+}
+
+function find(id,n=DATA){ if(n.id===id)return n; for(const c of(n.children||[])){const f=find(id,c);if(f)return f;} return null; }
+function findPar(id,n=DATA,par=null){ if(n.id===id)return par; for(const c of(n.children||[])){const f=findPar(id,c,n);if(f!==null)return f;} return null; }
+
+function edit(n,lbl) {
+  lbl.contentEditable='true'; lbl.focus();
+  const r=document.createRange(); r.selectNodeContents(lbl);
+  getSelection().removeAllRanges(); getSelection().addRange(r);
+  const done=()=>{lbl.contentEditable='false';n.text=lbl.textContent;lbl.removeEventListener('blur',done);lbl.removeEventListener('keydown',key);};
+  const key=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();done();}if(e.key==='Escape'){lbl.textContent=n.text;done();}};
+  lbl.addEventListener('blur',done); lbl.addEventListener('keydown',key);
+}
+
+function openCtx(e) {
+  const c=document.getElementById('ctx');
+  c.style.display='block'; c.style.left=e.clientX+'px'; c.style.top=e.clientY+'px';
+  const r=c.getBoundingClientRect();
+  if(r.right>innerWidth) c.style.left=(e.clientX-r.width)+'px';
+  if(r.bottom>innerHeight) c.style.top=(e.clientY-r.height)+'px';
+}
+document.addEventListener('click',()=>document.getElementById('ctx').style.display='none');
+
+const gid=()=>'n'+Date.now()+~~(Math.random()*999);
+
+document.getElementById('ci-child').onclick=()=>{
+  const n=find(ctxId); if(!n)return;
+  n.collapsed=false;
+  n.children.push({id:gid(),text:'Novo item',collapsed:true,children:[],pal:null});
+  render();
+};
+document.getElementById('ci-sib').onclick=()=>{
+  const p=findPar(ctxId); if(!p)return;
+  const n=find(ctxId);
+  const i=p.children.findIndex(c=>c.id===ctxId);
+  p.children.splice(i+1,0,{id:gid(),text:'Novo item',collapsed:true,children:[],pal:null});
+  render();
+};
+document.getElementById('ci-edit').onclick=()=>{
+  const el=document.getElementById('e'+ctxId);
+  if(el)edit(find(ctxId),el.querySelector('.lbl'));
+};
+document.getElementById('ci-tog').onclick=()=>{ const n=find(ctxId);if(n){n.collapsed=!n.collapsed;render();} };
+document.getElementById('ci-del').onclick=()=>{
+  if(ctxId==='root')return;
+  const p=findPar(ctxId);if(p){p.children=p.children.filter(c=>c.id!==ctxId);render();}
+};
+
+function expandAll() {
+  const ex=n=>{n.collapsed=false;(n.children||[]).forEach(ex);};
+  ex(DATA);
+}
+
+document.getElementById('bexp').onclick=()=>{
+  expandAll();
+  if(currentMode === 'mindmap') render();
+  if(currentMode === 'outline') renderOutline();
+};
+document.getElementById('bcol').onclick=()=>{
+  DATA.children.forEach(c=>{const cl=n=>{n.collapsed=true;(n.children||[]).forEach(cl);};cl(c);});
+  if(currentMode === 'mindmap') render();
+  if(currentMode === 'outline') renderOutline();
+};
+
+// ALTERNAR MODO
+let currentMode = 'mindmap'; // 'mindmap' | 'outline' | 'values'
+const vpEl = document.getElementById('vp');
+const outlineEl = document.getElementById('outline');
+const outlineInner = document.getElementById('outlineInner');
+const valuesEl = document.getElementById('values');
+const valuesInner = document.getElementById('valuesInner');
+const bmap = document.getElementById('bmap');
+const btext = document.getElementById('btext');
+const bval = document.getElementById('bval');
+const bprint = document.getElementById('bprint');
+
+function setMode(mode) {
+  currentMode = mode;
+  vpEl.style.display = mode === 'mindmap' ? 'block' : 'none';
+  outlineEl.classList.toggle('active', mode === 'outline');
+  valuesEl.classList.toggle('active', mode === 'values');
+  bmap.classList.toggle('active', mode === 'mindmap');
+  btext.classList.toggle('active', mode === 'outline');
+  bval.classList.toggle('active', mode === 'values');
+  bprint.disabled = mode !== 'outline';
+  if(mode === 'outline') renderOutline();
+  if(mode === 'values') renderValues();
+}
+
+bmap.onclick = () => setMode('mindmap');
+btext.onclick = () => setMode('outline');
+bval.onclick = () => setMode('values');
+bprint.onclick = () => {
+  if(currentMode !== 'outline') setMode('outline');
+  expandAll();
+  renderOutline();
+  window.print();
+};
+
+// RENDERIZAR OUTLINE
+function renderOutline() {
+  outlineInner.innerHTML = '';
+  const cleanText = (text) => text.replace(/^\d+\.\s*/,'');
+  
+  function buildOutlineNode(node, level) {
+    const item = document.createElement('div');
+    item.className = 'ol-item';
+    
+    const nodeDiv = document.createElement('div');
+    nodeDiv.className = 'ol-node lv-' + level;
+    
+    // Toggle button
+    if(node.children && node.children.length > 0) {
+      const toggle = document.createElement('div');
+      toggle.className = 'ol-toggle';
+      toggle.textContent = node.collapsed ? '+' : '−';
+      toggle.onclick = (e) => {
+        e.stopPropagation();
+        node.collapsed = !node.collapsed;
+        renderOutline();
+        render(); // atualiza mind map também
+      };
+      nodeDiv.appendChild(toggle);
+    } else {
+      const spacer = document.createElement('div');
+      spacer.style.width = '18px';
+      spacer.style.flexShrink = '0';
+      nodeDiv.appendChild(spacer);
+    }
+    
+    // Text
+    const text = document.createElement('div');
+    text.className = 'ol-text';
+    text.textContent = cleanText(node.text);
+    text.ondblclick = (e) => {
+      e.stopPropagation();
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = node.text;
+      input.style.cssText = 'width:100%;border:1px solid #cfd4de;border-radius:4px;padding:4px 8px;font-size:14px;font-family:Source Sans 3,sans-serif;';
+      input.onblur = () => {
+        node.text = input.value;
+        renderOutline();
+        render();
+      };
+      input.onkeydown = (ev) => {
+        if(ev.key === 'Enter') input.blur();
+        if(ev.key === 'Escape') { input.value = node.text; input.blur(); }
+      };
+      text.replaceWith(input);
+      input.focus();
+      input.select();
+    };
+    nodeDiv.appendChild(text);
+    
+    item.appendChild(nodeDiv);
+    
+    // Children
+    if(node.children && node.children.length > 0) {
+      const childrenDiv = document.createElement('div');
+      childrenDiv.className = 'ol-children' + (node.collapsed ? ' collapsed' : '');
+      node.children.forEach(child => {
+        childrenDiv.appendChild(buildOutlineNode(child, level + 1));
+      });
+      item.appendChild(childrenDiv);
+    }
+    
+    return item;
+  }
+  
+  outlineInner.appendChild(buildOutlineNode(DATA, 0));
+}
+
+function renderValues() {
+  valuesInner.innerHTML = '';
+  const cleanText = (text) => text.replace(/^\d+\.\s*/,'');
+  const fixedValues = {
+    q1: 'R$ 300',
+    f1: 'R$ 350',
+    n1: 'R$ 350',
+    p1: 'R$ 350',
+    d1: 'R$ 200',
+    c1: 'R$ 300'
+  };
+  const wrap = document.createElement('div');
+  wrap.className = 'val-wrap';
+
+  const rows = [];
+  function collect(node, level) {
+    if(level === 1) rows.push({ node, level });
+    (node.children || []).forEach(child => collect(child, level + 1));
+  }
+  collect(DATA, 0);
+
+  rows.forEach(({ node, level }) => {
+    const row = document.createElement('div');
+    row.className = 'val-row val-level-' + level;
+
+    const label = document.createElement('div');
+    label.className = 'val-label';
+    label.textContent = cleanText(node.text);
+
+    const value = document.createElement('div');
+    value.className = 'val-value';
+    value.textContent = fixedValues[node.id] || '';
+
+    row.appendChild(label);
+    row.appendChild(value);
+    wrap.appendChild(row);
+  });
+
+  const extraRow = document.createElement('div');
+  extraRow.className = 'val-row val-level-1';
+  const extraLabel = document.createElement('div');
+  extraLabel.className = 'val-label';
+  extraLabel.textContent = 'API Oficial + Site institucional (Concluido, falta apenas pagar)';
+  const extraValue = document.createElement('div');
+  extraValue.className = 'val-value';
+  extraValue.textContent = 'R$ 500';
+  extraRow.appendChild(extraLabel);
+  extraRow.appendChild(extraValue);
+  wrap.appendChild(extraRow);
+
+  valuesInner.appendChild(wrap);
+}
+
+// PAN + ZOOM
+const vp=document.getElementById('vp');
+let pan=false,sx,sy,tx=60,ty=30,sc=1,zoomLevel=1;
+function centerMap() {
+  const r=vp.getBoundingClientRect();
+  const cw=canvas.offsetWidth * sc;
+  const ch=canvas.offsetHeight * sc;
+  tx = Math.round((r.width - cw) / 2);
+  ty = Math.round((r.height - ch) / 2);
+}
+function applyViewZoom(prev) {
+  outlineEl.style.setProperty('--zoom', zoomLevel.toFixed(2));
+  valuesEl.style.setProperty('--zoom', zoomLevel.toFixed(2));
+  document.getElementById('zl').textContent=Math.round(zoomLevel*100)+'%';
+  if(prev && currentMode !== 'mindmap') {
+    const container = currentMode === 'outline' ? outlineEl : valuesEl;
+    const ratio = zoomLevel / prev;
+    const cx = container.scrollLeft + container.clientWidth / 2;
+    const cy = container.scrollTop + container.clientHeight / 2;
+    container.scrollLeft = (cx * ratio) - container.clientWidth / 2;
+    container.scrollTop = (cy * ratio) - container.clientHeight / 2;
+  }
+}
+function applyT(prev){
+  canvas.style.transform=`translate(${tx}px,${ty}px) scale(${sc})`;
+  applyViewZoom(prev);
+}
+applyT();
+vp.addEventListener('mousedown',e=>{if(e.target.closest('.nd'))return;pan=true;sx=e.clientX-tx;sy=e.clientY-ty;vp.classList.add('pan');});
+document.addEventListener('mousemove',e=>{if(!pan)return;tx=e.clientX-sx;ty=e.clientY-sy;applyT();});
+document.addEventListener('mouseup',()=>{pan=false;vp.classList.remove('pan');});
+vp.addEventListener('wheel',e=>{
+  if(currentMode !== 'mindmap') return;
+  e.preventDefault();
+  const f=e.deltaY<0?1.1:.91;
+  const r=vp.getBoundingClientRect();
+  const mx=r.width/2, my=r.height/2;
+  tx=mx-(mx-tx)*f;ty=my-(my-ty)*f;
+  const prev=sc;
+  sc=Math.min(Math.max(sc*f,.15),3);
+  zoomLevel=sc;
+  applyT(prev);
+},{passive:false});
+document.getElementById('zp').onclick=()=>{
+  const prev=zoomLevel;
+  const next=Math.min(zoomLevel*1.15,3);
+  const f=next/zoomLevel;
+  zoomLevel=next; sc=zoomLevel;
+  if(currentMode === 'mindmap') {
+    const r=vp.getBoundingClientRect();
+    const mx=r.width/2, my=r.height/2;
+    tx=mx-(mx-tx)*f;ty=my-(my-ty)*f;
+  }
+  applyT(prev);
+};
+document.getElementById('zm').onclick=()=>{
+  const prev=zoomLevel;
+  const next=Math.max(zoomLevel*.87,.15);
+  const f=next/zoomLevel;
+  zoomLevel=next; sc=zoomLevel;
+  if(currentMode === 'mindmap') {
+    const r=vp.getBoundingClientRect();
+    const mx=r.width/2, my=r.height/2;
+    tx=mx-(mx-tx)*f;ty=my-(my-ty)*f;
+  }
+  applyT(prev);
+};
+document.getElementById('zf').onclick=()=>{
+  zoomLevel=1;sc=1;
+  centerMap();
+  applyT();
+};
+vp.addEventListener('click',e=>{if(!e.target.closest('.nd')){selId=null;render();}});
+
+render();
+centerMap();
+applyT();
+setMode('mindmap');
+</script>
+</body>
+</html>
