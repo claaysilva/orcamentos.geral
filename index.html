@@ -630,7 +630,16 @@ function render() {
       el.appendChild(b);
     }
 
-    el.onclick=e=>{e.stopPropagation();selId=n.id;render();};
+    el.onclick=e=>{
+      e.stopPropagation();
+      if(n.children && n.children.length) {
+        n.collapsed=!n.collapsed;
+        render();
+        if(currentMode === 'outline') renderOutline();
+      }
+      selId=n.id;
+      render();
+    };
     el.ondblclick=e=>{e.stopPropagation();edit(n,lbl);};
     el.oncontextmenu=e=>{e.preventDefault();ctxId=n.id;selId=n.id;render();openCtx(e);};
     canvas.appendChild(el);
@@ -776,6 +785,13 @@ function renderOutline() {
     
     const nodeDiv = document.createElement('div');
     nodeDiv.className = 'ol-node lv-' + level;
+    nodeDiv.onclick = () => {
+      if(node.children && node.children.length > 0) {
+        node.collapsed = !node.collapsed;
+        renderOutline();
+        render();
+      }
+    };
     
     // Toggle button
     if(node.children && node.children.length > 0) {
