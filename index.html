@@ -529,6 +529,11 @@ const DATA = {
   ]
 };
 
+function collapseAllOnLoad(node) {
+  node.collapsed = true;
+  (node.children || []).forEach(collapseAllOnLoad);
+}
+
 // ══════════ LAYOUT ══════════
 const COL=258, PAD=6, OX=40, OY=60;
 
@@ -1008,6 +1013,7 @@ document.getElementById('zf').onclick=()=>{
 };
 vp.addEventListener('click',e=>{if(!e.target.closest('.nd')){selId=null;render();}});
 
+collapseAllOnLoad(DATA);
 render();
 centerMap();
 applyT();
