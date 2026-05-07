@@ -105,7 +105,7 @@ export default function App(){
     const isMobile = window.matchMedia('(max-width:820px)').matches
     return isMobile ? 'outline' : 'mindmap'
   })
-  const [tree, setTree] = useState(()=> setAllCollapsed(DATA, true, true, true))
+  const [tree, setTree] = useState(()=> setAllCollapsed(DATA, true, true, false))
   const [canvasSize, setCanvasSize] = useState({width: 0, height: 0})
   const [view, setView] = useState({tx: 60, ty: 30, sc: 1})
   const vpRef = useRef(null)
