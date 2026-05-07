@@ -175,10 +175,6 @@ svg#svg { position:absolute; top:0; left:0; overflow:visible; pointer-events:non
   #outline, #values { top:86px; padding:24px 18px; }
   #zoom { display:none; }
   .hide-mobile { display:none !important; }
-  #bmenu { display:inline-flex !important; }
-  .mobile-actions { display:none; position:absolute; left:0; right:0; background:var(--white); border-bottom:1px solid var(--border); z-index:995; box-shadow:0 6px 18px rgba(0,0,0,.06); }
-  .mobile-actions.open { display:block; }
-  .mobile-actions .btn { margin:8px; }
   .ol-text { font-size:13px; }
   .ol-node.lv-0 .ol-text { font-size:15px; }
   .ol-node.lv-1 .ol-text { font-size:14px; }
@@ -286,18 +282,16 @@ svg#svg { position:absolute; top:0; left:0; overflow:visible; pointer-events:non
   <span class="tb-sub">— Advocacia Caldeira Paizante</span>
   <span class="sep"></span>
   <button class="btn" id="bmap">Modo Mapa</button>
-  <button class="btn hide-mobile" id="btext">Modo Texto</button>
   <button class="btn" id="bval">Valores</button>
   <div class="tb-sep"></div>
-  <span class="hint">Duplo clique = editar · Clique direito = opções</span>
+  <span class="hint">Clique direito = opções</span>
   <div class="tb-sep"></div>
   <button class="btn hide-mobile" id="bexp">Expandir</button>
   <button class="btn" id="bcol">Recolher</button>
   <div class="tb-sep"></div>
   <button class="btn hide-mobile" id="bprint">Imprimir texto</button>
-  <button class="btn" id="bmenu" style="display:none;margin-left:8px">☰</button>
 </div>
-<div id="mobileActions" class="mobile-actions" style="display:none"></div>
+<!-- mobileActions removed -->
 
 <div id="vp">
   <div id="canvas"><svg id="svg"></svg></div>
@@ -665,7 +659,6 @@ function render() {
       selId=n.id;
       render();
     };
-    el.ondblclick=e=>{e.stopPropagation();edit(n,lbl);};
     el.oncontextmenu=e=>{e.preventDefault();ctxId=n.id;selId=n.id;render();openCtx(e);};
     canvas.appendChild(el);
     nodeMap[n.id]=n;
@@ -772,12 +765,9 @@ const outlineInner = document.getElementById('outlineInner');
 const valuesEl = document.getElementById('values');
 const valuesInner = document.getElementById('valuesInner');
 const bmap = document.getElementById('bmap');
-const btext = document.getElementById('btext');
 const bval = document.getElementById('bval');
 const bprint = document.getElementById('bprint');
 const isMobile = window.matchMedia('(max-width: 820px)').matches;
-const bmenu = document.getElementById('bmenu');
-const mobileActions = document.getElementById('mobileActions');
 
 function updateTopOffset(){
   const tbEl=document.getElementById('tb');
@@ -785,7 +775,6 @@ function updateTopOffset(){
   outlineEl.style.top = h + 'px';
   valuesEl.style.top = h + 'px';
   vpEl.style.top = h + 'px';
-  mobileActions.style.top = h + 'px';
 }
 
 window.addEventListener('resize',()=>{ updateTopOffset(); });
@@ -797,7 +786,6 @@ function setMode(mode) {
   outlineEl.classList.toggle('active', mode === 'outline');
   valuesEl.classList.toggle('active', mode === 'values');
   bmap.classList.toggle('active', mode === 'mindmap');
-  btext.classList.toggle('active', mode === 'outline');
   bval.classList.toggle('active', mode === 'values');
   bprint.disabled = mode !== 'outline';
   if(mode === 'outline') renderOutline();
@@ -805,7 +793,6 @@ function setMode(mode) {
 }
 
 bmap.onclick = () => setMode('mindmap');
-btext.onclick = () => setMode('outline');
 bval.onclick = () => setMode('values');
 bprint.onclick = () => {
   if(currentMode !== 'outline') setMode('outline');
@@ -814,27 +801,7 @@ bprint.onclick = () => {
   window.print();
 };
 
-// mobile menu behavior
-if(bmenu){
-  bmenu.onclick = ()=>{
-    if(!mobileActions) return;
-    mobileActions.classList.toggle('open');
-    if(mobileActions.classList.contains('open')){
-      mobileActions.innerHTML = '';
-      const mRecolher = document.createElement('button');
-      mRecolher.className='btn'; mRecolher.textContent='Recolher';
-      mRecolher.onclick = ()=>{ document.getElementById('bcol').click(); mobileActions.classList.remove('open'); };
-      const mValores = document.createElement('button');
-      mValores.className='btn'; mValores.textContent='Valores';
-      mValores.onclick = ()=>{ setMode('values'); mobileActions.classList.remove('open'); };
-      mobileActions.appendChild(mRecolher);
-      mobileActions.appendChild(mValores);
-    } else {
-      mobileActions.innerHTML='';
-    }
-    updateTopOffset();
-  };
-}
+// mobile menu removed
 
 // RENDERIZAR OUTLINE
 function renderOutline() {
@@ -878,25 +845,7 @@ function renderOutline() {
     const text = document.createElement('div');
     text.className = 'ol-text';
     text.textContent = cleanText(node.text);
-    text.ondblclick = (e) => {
-      e.stopPropagation();
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.value = node.text;
-      input.style.cssText = 'width:100%;border:1px solid #cfd4de;border-radius:4px;padding:4px 8px;font-size:14px;font-family:Source Sans 3,sans-serif;';
-      input.onblur = () => {
-        node.text = input.value;
-        renderOutline();
-        render();
-      };
-      input.onkeydown = (ev) => {
-        if(ev.key === 'Enter') input.blur();
-        if(ev.key === 'Escape') { input.value = node.text; input.blur(); }
-      };
-      text.replaceWith(input);
-      input.focus();
-      input.select();
-    };
+    // editing via double-click removed; use context menu to edit
     nodeDiv.appendChild(text);
     
     item.appendChild(nodeDiv);
