@@ -34,6 +34,21 @@ export const DATA = {
         { id: 'q1d6', text: 'Futura automação por IA', collapsed: true, children: [] }
       ] }
     ] },
+    { id: 's1', text: '2. Disparos', collapsed: false, pal: 1, children: [
+      { id: 's1a', text: 'Workflow: Disparo programado', collapsed: true, children: [
+        { id: 's1a1', text: 'Trigger: agendamento/horário', collapsed: true, children: [] },
+        { id: 's1a2', text: 'Segmentação por tag/segmento', collapsed: true, children: [] },
+        { id: 's1a3', text: 'Rate limit / filas de envio', collapsed: true, children: [] }
+      ] },
+      { id: 's1b', text: 'Templates e opt-in', collapsed: true, children: [
+        { id: 's1b1', text: 'Gerenciar templates aprovados', collapsed: true, children: [] },
+        { id: 's1b2', text: 'Verificar consentimento / opt-in', collapsed: true, children: [] }
+      ] },
+      { id: 's1c', text: 'Monitoramento', collapsed: true, children: [
+        { id: 's1c1', text: 'Logs de entrega e erros', collapsed: true, children: [] },
+        { id: 's1c2', text: 'Relatórios de entregabilidade', collapsed: true, children: [] }
+      ] }
+    ] },
     { id: 'f1', text: '3. Follow-up Automático', collapsed: false, pal: 1, children: [
       { id: 'f1a', text: 'Workflow: Follow-up 4h', collapsed: true, children: [
         { id: 'f1a1', text: 'Trigger: 4h sem resposta', collapsed: true, children: [] },

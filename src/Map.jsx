@@ -31,7 +31,8 @@ function nodeHeight(text, level){
   el.style.fontWeight = level === 0 ? '700' : level === 1 ? '600' : level === 2 ? '500' : '400'
   el.style.padding = paddings[index]
   el.style.width = `${widths[index]}px`
-  el.textContent = text
+  const display = String(text).replace(/^\d+\.\s*/, '')
+  el.textContent = display
   return Math.max(el.offsetHeight, level === 0 ? 42 : 26)
 }
 
@@ -173,7 +174,7 @@ export default function Map({data, onToggle, transform, onCanvasSize}){
                 fontWeight: node._lv===0 ? 700 : node._lv===1 ? 600 : node._lv===2 ? 500 : 400,
                 letterSpacing: node._lv===0 ? '-.2px' : node._lv===1 ? '-.1px' : '0'
               }}
-            >{node.text}</div>
+            >{String(node.text).replace(/^\d+\.\s*/, '')}</div>
             {hasChildren ? (
               <div className="badge" style={{background: st.badge}} onClick={(e)=>{ e.stopPropagation(); if(onToggle) onToggle(node.id) }}>{renderBadgeText(node.collapsed)}</div>
             ) : null}
