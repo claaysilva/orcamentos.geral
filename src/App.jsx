@@ -69,12 +69,18 @@ function Outline({data, onToggle}){
 
 function Values({data}){
   const fixedValues = {
-    q1: 'R$ 350', f1: 'R$ 350', n1: 'R$ 350', p1: 'R$ 400', d1: 'R$ 200', c1: 'R$ 300', s1: 'R$ 350'
+    q1: 'R$ 350', s1: 'R$ 500', f1: 'R$ 400', n1: 'R$ 400', p1: 'R$ 400', d1: 'R$ 300', c1: 'R$ 300'
   }
-  const extras = [{ label: 'API Oficial + Site institucional (Concluido, falta apenas pagar)', value: 'R$ 500' }]
+  const discounts = {
+    s1: 'R$ 150',
+    f1: 'R$ 50',
+    n1: 'R$ 50',
+    d1: 'R$ 100'
+  }
+  const extras = [{ label: 'API Oficial + Site institucional (Concluido, falta apenas pagar)', value: 'R$ 650', discount: 'R$ 150' }]
   const toNumber = v=> Number(String(v).replace(/[^0-9]/g,''))||0
-  const rows = data.children.map(c=>({label:cleanText(c.text), value: fixedValues[c.id]||''}))
-  const subtotal = rows.reduce((s,r)=> s + toNumber(r.value),0) + extras.reduce((s,e)=> s + toNumber(e.value),0)
+  const rows = data.children.map(c=>({label:cleanText(c.text), value: fixedValues[c.id]||'', discount: discounts[c.id]||''}))
+  const subtotal = rows.reduce((s,r)=> s + Math.max(0, toNumber(r.value) - toNumber(r.discount)),0) + extras.reduce((s,e)=> s + Math.max(0, toNumber(e.value) - toNumber(e.discount)),0)
   const discount = 150
   const total = Math.max(subtotal - discount,0)
   const projectPayment = { value: 'R$ 2.650', plan: '1x R$ 550 + 3x R$ 700' }
@@ -83,13 +89,19 @@ function Values({data}){
       <div className="val-wrap">
         {rows.map((r,idx)=>(
           <div className={'val-row val-level-1'} key={idx}>
-            <div className="val-label">{r.label}</div>
+            <div className="val-label">
+              {r.label}
+              {r.discount ? <div style={{fontSize:11, color:'#666', marginTop:4}}>Desconto: - {r.discount}</div> : null}
+            </div>
             <div className="val-value">{r.value}</div>
           </div>
         ))}
         {extras.map((ex,i)=> (
           <div className={'val-row val-level-1'} key={'ex'+i}>
-            <div className="val-label">{ex.label}</div>
+            <div className="val-label">
+              {ex.label}
+              {ex.discount ? <div style={{fontSize:11, color:'#666', marginTop:4}}>Desconto: - {ex.discount}</div> : null}
+            </div>
             <div className="val-value">{ex.value}</div>
           </div>
         ))}
