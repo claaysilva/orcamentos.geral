@@ -7,6 +7,8 @@
     "dev:server": "node server/index.js",
     "supabase:apply": "node scripts/apply_schema.js",
     "build": "vite build",
+    "ci:build": "npm ci && npm run build",
+    "smoke": "node scripts/smoke_test.js",
     "preview": "vite preview"
   },
   "dependencies": {

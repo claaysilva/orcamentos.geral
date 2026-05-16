@@ -23,6 +23,34 @@ if (fs.existsSync(dotenvPath)){
 const app = express();
 app.use(bodyParser.json());
 
+// --- Admin auth middleware
+// Prefer providing `ADMIN_TOKEN` (strong random string) in environment.
+// Fallback: use `ADMIN_USERNAME` + `ADMIN_PASSWORD` for Basic auth.
+function adminAuth(req, res, next){
+  const adminToken = process.env.ADMIN_TOKEN;
+  if(adminToken){
+    const token = req.headers['x-admin-token'] || req.headers['authorization'] && req.headers['authorization'].replace(/^Bearer\s+/i,'');
+    if(token && token === adminToken) return next();
+    return res.status(401).json({ error: 'admin auth required' });
+  }
+  // basic auth fallback
+  const user = process.env.ADMIN_USERNAME;
+  const pass = process.env.ADMIN_PASSWORD;
+  if(user && pass){
+    const auth = req.headers.authorization || '';
+    if(auth.startsWith('Basic ')){
+      const creds = Buffer.from(auth.slice(6), 'base64').toString('utf8').split(':');
+      if(creds[0] === user && creds[1] === pass) return next();
+    }
+    return res.status(401).json({ error: 'admin basic auth required' });
+  }
+  // If no admin creds set, deny by default for safety
+  return res.status(401).json({ error: 'admin credentials not configured' });
+}
+
+// Protect admin routes
+app.use('/api/admin', adminAuth);
+
 const PORT = process.env.PORT || 4000;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;

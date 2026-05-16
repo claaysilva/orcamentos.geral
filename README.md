@@ -10,10 +10,14 @@ Principais arquivos adicionados
 - `scripts/migrate_from_data.js` — script que importa os dados de `src/data.js` para `server/storage.json`.
 - `src/pages/admin/*` e `src/pages/public/*` — páginas administrativas e públicas.
 
-Variáveis de ambiente (local)
-- `SUPABASE_URL` (opcional)
-- `SUPABASE_SERVICE_ROLE_KEY` (opcional)
-- `APP_SECRET_SALT` (recomendado para hashing do CNPJ)
+Variáveis de ambiente (local e produção)
+- `VITE_SUPABASE_URL` — URL pública do Supabase (frontend)
+- `VITE_SUPABASE_ANON_KEY` — chave anon (frontend)
+- `SUPABASE_URL` — URL do Supabase (server)
+- `SUPABASE_SERVICE_ROLE_KEY` — chave service role (server-only)
+- `DATABASE_URL` — (opcional) string Postgres para executar migrations
+- `APP_SECRET_SALT` — salt para hashing do CNPJ (recomendado)
+- `ADMIN_TOKEN` — token forte para proteger rotas admin (ou use `ADMIN_USERNAME` + `ADMIN_PASSWORD`)
 
 Rodando localmente
 1. Instale dependências:
@@ -33,6 +37,10 @@ npm run dev
 ```powershell
 npm run dev:server
 ```
+
+Protegendo rotas admin
+
+Defina `ADMIN_TOKEN` no ambiente (recomendado) e envie o header `x-admin-token: <token>` nas requisições administrativas. Alternativamente, defina `ADMIN_USERNAME` e `ADMIN_PASSWORD` e use Basic Auth.
 
 4. Opcional: migrar dados do `src/data.js` para `server/storage.json`:
 
