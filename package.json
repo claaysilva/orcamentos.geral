@@ -4,12 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "vite",
+    "dev:server": "node server/index.js",
+    "supabase:apply": "node scripts/apply_schema.js",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.105.4",
+    "bcryptjs": "^3.0.3",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.20.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^7.15.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",
