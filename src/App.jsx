@@ -80,39 +80,31 @@ function Values({data}){
   const extras = [{ label: 'API Oficial + Site institucional (Concluido, falta apenas pagar)', value: 'R$ 650', discount: 'R$ 150' }]
   const toNumber = v=> Number(String(v).replace(/[^0-9]/g,''))||0
   const rows = data.children.map(c=>({label:cleanText(c.text), value: fixedValues[c.id]||'', discount: discounts[c.id]||''}))
-  const subtotal = rows.reduce((s,r)=> s + Math.max(0, toNumber(r.value) - toNumber(r.discount)),0) + extras.reduce((s,e)=> s + Math.max(0, toNumber(e.value) - toNumber(e.discount)),0)
-  const discount = 150
-  const total = Math.max(subtotal - discount,0)
-  const itemDiscountSum = rows.reduce((s,r)=> s + toNumber(r.discount),0)
-  const extrasDiscountSum = extras.reduce((s,e)=> s + toNumber(e.discount||0),0)
-  const totalItemDiscounts = itemDiscountSum + extrasDiscountSum
-  const totalDiscountsApplied = totalItemDiscounts + discount
+    const subtotalReal = rows.reduce((s,r)=> s + toNumber(r.value),0) + extras.reduce((s,e)=> s + toNumber(e.value),0)
+    const itemDiscountSum = rows.reduce((s,r)=> s + toNumber(r.discount),0)
+    const extrasDiscountSum = extras.reduce((s,e)=> s + toNumber(e.discount||0),0)
+    const packageDiscount = 150
+    const totalDiscounts = itemDiscountSum + extrasDiscountSum + packageDiscount
+    const total = Math.max(subtotalReal - totalDiscounts,0)
+  
   const projectPayment = { value: 'R$ 2.650', plan: '1x R$ 550 + 3x R$ 700' }
   return (
     <div id="valuesInner" className="view-inner">
       <div className="val-wrap">
         {rows.map((r,idx)=>(
           <div className={'val-row val-level-1'} key={idx}>
-            <div className="val-label">
-              {r.label}
-              {r.discount ? <div style={{fontSize:11, color:'#666', marginTop:4}}>Desconto: - {r.discount}</div> : null}
-            </div>
+            <div className="val-label">{r.label}</div>
             <div className="val-value">{r.value}</div>
           </div>
         ))}
         {extras.map((ex,i)=> (
           <div className={'val-row val-level-1'} key={'ex'+i}>
-            <div className="val-label">
-              {ex.label}
-              {ex.discount ? <div style={{fontSize:11, color:'#666', marginTop:4}}>Desconto: - {ex.discount}</div> : null}
-            </div>
+            <div className="val-label">{ex.label}</div>
             <div className="val-value">{ex.value}</div>
           </div>
         ))}
-        <div className="val-row total"><div className="val-label">Subtotal (após descontos itens)</div><div className="val-value">R$ {subtotal}</div></div>
-        <div className="val-row"><div className="val-label">Descontos (itens)</div><div className="val-value">- R$ {totalItemDiscounts}</div></div>
-        <div className="val-row"><div className="val-label">Desconto pacote completo</div><div className="val-value">- R$ {discount}</div></div>
-        <div className="val-row"><div className="val-label">Total descontos aplicados</div><div className="val-value">- R$ {totalDiscountsApplied}</div></div>
+        <div className="val-row total"><div className="val-label">Subtotal</div><div className="val-value">R$ {subtotalReal}</div></div>
+        <div className="val-row"><div className="val-label">Total descontos</div><div className="val-value">- R$ {totalDiscounts}</div></div>
         <div className="val-row total"><div className="val-label">Total com desconto</div><div className="val-value">R$ {total}</div></div>
         <div style={{height:10}} />
         <div className="val-row"><div className="val-label">Pagamento (projeto): {projectPayment.plan}</div><div className="val-value">{projectPayment.value}</div></div>
