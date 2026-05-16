@@ -6,8 +6,41 @@
       "cnpj_hash": "$2b$12$mh/0MF4QeA11BmcJDs5oz.L0WKV8maimSGTWeF2IklurCD82avFtO",
       "created_at": "2026-05-16T21:02:30.383Z"
     }
+    ,
+    {
+      "id": "8a6f6d4b-2c4f-4d1a-9f2b-3e1f2a4b5c6d",
+      "name": "Dr Keoma",
+      "cnpj_hash": "$2b$12$r7qsJyWFe7xncqzwCA7MSOKkQGvDrqixiGjSoemG.vLC550KXnl4G",
+      "created_at": "2026-05-16T21:50:00.000Z"
+    }
   ],
-  "quotes": [],
-  "quote_items": [],
+  "quotes": [
+    {
+      "id": "b1c2d3e4-5678-4a1b-9c0d-123456789abc",
+      "client_id": "8a6f6d4b-2c4f-4d1a-9f2b-3e1f2a4b5c6d",
+      "title": "Orçamento Dr Keoma",
+      "description": "Orçamento inicial vinculado ao cliente Dr Keoma",
+      "subtotal": 2650,
+      "discount_total": 0,
+      "total": 2650,
+      "valid_until": null,
+      "status": "draft",
+      "public_token": null,
+      "created_at": "2026-05-16T21:50:00.000Z",
+      "updated_at": "2026-05-16T21:50:00.000Z"
+    }
+  ],
+  "quote_items": [
+    {
+      "id": "i1-0001",
+      "quote_id": "b1c2d3e4-5678-4a1b-9c0d-123456789abc",
+      "title": "Implementação GHL - Dr Keoma",
+      "description": "Serviços iniciais",
+      "quantity": 1,
+      "price": 2650,
+      "discount": 0,
+      "sort_order": 0
+    }
+  ],
   "quote_access_logs": []
 }

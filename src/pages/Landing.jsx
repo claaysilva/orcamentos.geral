@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/router'
 
-export default function AdminClients(){
+export default function Landing(){
   const router = useRouter()
-  useEffect(()=>{ router.replace('/admin/clients') },[router])
+  useEffect(()=>{ router.replace('/') },[router])
   return null
 }

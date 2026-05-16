@@ -6,12 +6,13 @@ import AdminClients from './pages/admin/clients'
 import AdminQuotes from './pages/admin/quotes'
 import QuoteEditor from './pages/admin/quoteEditor'
 import PublicQuoteAccess from './pages/public/quoteAccess'
+import Landing from './pages/Landing'
 import './styles.css'
 
 createRoot(document.getElementById('root')).render(
 	<BrowserRouter>
 		<Routes>
-			<Route path="/" element={<App />} />
+			<Route path="/" element={<Landing />} />
 			<Route path="/admin/clients" element={<AdminClients />} />
 			<Route path="/admin/quotes" element={<AdminQuotes />} />
 			<Route path="/admin/quote/:id" element={<QuoteEditor />} />

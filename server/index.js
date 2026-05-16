@@ -22,18 +22,28 @@ if (fs.existsSync(dotenvPath)){
 
 const app = express();
 app.use(bodyParser.json());
+const jwt = require('jsonwebtoken');
 
 // --- Admin auth middleware
 // Prefer providing `ADMIN_TOKEN` (strong random string) in environment.
 // Fallback: use `ADMIN_USERNAME` + `ADMIN_PASSWORD` for Basic auth.
 function adminAuth(req, res, next){
+  // allow unauthenticated access to the login endpoint
+  if(req.path === '/login' && req.method === 'POST') return next();
   const adminToken = process.env.ADMIN_TOKEN;
-  if(adminToken){
-    const token = req.headers['x-admin-token'] || req.headers['authorization'] && req.headers['authorization'].replace(/^Bearer\s+/i,'');
-    if(token && token === adminToken) return next();
-    return res.status(401).json({ error: 'admin auth required' });
+  const token = req.headers['x-admin-token'] || req.headers['authorization'] && req.headers['authorization'].replace(/^Bearer\s+/i,'');
+  if(adminToken && token){
+    if(token === adminToken) return next();
   }
-  // basic auth fallback
+  // Accept JWT signed with APP_SECRET_SALT
+  if(token){
+    try{
+      const secret = APP_SECRET_SALT || 'dev_secret';
+      const payload = jwt.verify(token, secret);
+      if(payload && payload.role === 'admin') return next();
+    }catch(e){ /* ignore */ }
+  }
+  // If ADMIN_TOKEN not used / JWT invalid, fallback to env username/password
   const user = process.env.ADMIN_USERNAME;
   const pass = process.env.ADMIN_PASSWORD;
   if(user && pass){
@@ -105,6 +115,70 @@ app.get('/api/admin/clients', async (req, res) => {
   }catch(err){
     res.status(500).json({ error: err.message });
   }
+});
+
+// POST /api/public/quotes/:id/save - permite ao cliente (após validação de CNPJ) salvar alterações no orçamento
+app.post('/api/public/quotes/:id/save', async (req, res) => {
+  try{
+    const id = req.params.id;
+    const { cnpj, quote } = req.body || {};
+    if(!cnpj || !quote) return res.status(400).json({ ok:false, error:'cnpj and quote payload required' });
+    if(useFallback){
+      const q = storage.quotes.find(x=>x.id===id);
+      if(!q) return res.status(404).json({ ok:false, error:'quote not found' });
+      const client = storage.clients.find(c=>c.id===q.client_id);
+      if(!client) return res.status(404).json({ ok:false, error:'client not found' });
+      const salted = cnpj + APP_SECRET_SALT;
+      const ok = await bcrypt.compare(salted, client.cnpj_hash);
+      if(!ok) return res.status(401).json({ ok:false, error:'invalid cnpj' });
+      // accept and replace allowed fields
+      q.title = quote.title || q.title;
+      q.description = quote.description || q.description;
+      q.subtotal = typeof quote.subtotal === 'number' ? quote.subtotal : q.subtotal;
+      q.discount_total = typeof quote.discount_total === 'number' ? quote.discount_total : q.discount_total;
+      q.total = typeof quote.total === 'number' ? quote.total : q.total;
+      q.valid_until = quote.valid_until || q.valid_until;
+      q.status = quote.status || q.status;
+      q.updated_at = new Date().toISOString();
+      // replace items if provided
+      if(Array.isArray(quote.items)){
+        // remove existing items for this quote
+        storage.quote_items = storage.quote_items.filter(i=>i.quote_id !== id);
+        for(const it of quote.items){
+          storage.quote_items.push({ id: it.id || require('crypto').randomUUID(), quote_id: id, title: it.title||'', description: it.description||'', quantity: it.quantity||1, price: it.price||0, discount: it.discount||0, sort_order: it.sort_order||0 });
+        }
+      }
+      persistStorage();
+      const items = storage.quote_items.filter(i=>i.quote_id===id);
+      return res.json({ ok:true, quote: { ...q, items } });
+    }
+
+    // If using Supabase, verify client by comparing hashes and update via service role
+    const { data: qdata, error: qerr } = await supa.from('quotes').select('*').eq('id', id).single();
+    if(qerr) return res.status(404).json({ ok:false, error: qerr.message });
+    const clientId = qdata.client_id;
+    const { data: clientsData, error: clientErr } = await supa.from('clients').select('*').eq('id', clientId).single();
+    if(clientErr) return res.status(404).json({ ok:false, error: clientErr.message });
+    const client = clientsData;
+    const salted = cnpj + APP_SECRET_SALT;
+    const ok = await bcrypt.compare(salted, client.cnpj_hash);
+    if(!ok) return res.status(401).json({ ok:false, error:'invalid cnpj' });
+
+    // update quote record
+    const payload = { title: quote.title||qdata.title, description: quote.description||qdata.description, subtotal: quote.subtotal||qdata.subtotal, discount_total: quote.discount_total||qdata.discount_total, total: quote.total||qdata.total, valid_until: quote.valid_until||qdata.valid_until, status: quote.status||qdata.status, updated_at: new Date().toISOString() };
+    const { data: updated, error: updErr } = await supa.from('quotes').update(payload).eq('id', id).select().single();
+    if(updErr) return res.status(500).json({ ok:false, error: updErr.message });
+
+    // replace items: simple approach delete + insert
+    if(Array.isArray(quote.items)){
+      await supa.from('quote_items').delete().eq('quote_id', id);
+      const toInsert = quote.items.map(it=>({ quote_id: id, title: it.title||'', description: it.description||'', quantity: it.quantity||1, price: it.price||0, discount: it.discount||0, sort_order: it.sort_order||0 }));
+      if(toInsert.length) await supa.from('quote_items').insert(toInsert);
+    }
+
+    const { data: itemsData } = await supa.from('quote_items').select('*').eq('quote_id', id);
+    res.json({ ok:true, quote: { ...updated, items: itemsData } });
+  }catch(e){ res.status(500).json({ ok:false, error: e.message }); }
 });
 
 // PUT /api/admin/clients/:id
@@ -217,6 +291,30 @@ app.post('/api/public/access', async (req, res) => {
   }
 });
 
+// POST /api/public/quotes - retorna orçamentos vinculados a um CNPJ (sem expor hashes)
+app.post('/api/public/quotes', async (req, res) => {
+  try{
+    const { cnpj } = req.body;
+    if(!cnpj) return res.status(400).json({ ok:false, error:'cnpj required' });
+    // find client by comparing hash
+    if(useFallback){
+      const client = storage.clients.find(c=> bcrypt.compareSync(cnpj + APP_SECRET_SALT, c.cnpj_hash));
+      if(!client) return res.status(404).json({ ok:false, error:'client not found' });
+      const quotes = storage.quotes.filter(q=>q.client_id === client.id).map(q=> ({ id:q.id, title:q.title, total:q.total, status:q.status }));
+      return res.json({ ok:true, client: { id: client.id, name: client.name }, quotes });
+    }
+    // find client in supabase
+    const { data: clientsData, error: clientErr } = await supa.from('clients').select('*');
+    if(clientErr) return res.status(500).json({ ok:false, error: clientErr.message });
+    const found = clientsData.find(c => bcrypt.compareSync(cnpj + APP_SECRET_SALT, c.cnpj_hash));
+    if(!found) return res.status(404).json({ ok:false, error:'client not found' });
+    const { data: quotesData, error: quotesErr } = await supa.from('quotes').select('*').eq('client_id', found.id);
+    if(quotesErr) return res.status(500).json({ ok:false, error: quotesErr.message });
+    const quotes = quotesData.map(q=> ({ id:q.id, title:q.title, total:q.total, status:q.status }));
+    res.json({ ok:true, client: { id: found.id, name: found.name }, quotes });
+  }catch(e){ res.status(500).json({ ok:false, error: e.message }); }
+});
+
 // --- Quotes CRUD (admin)
 app.get('/api/admin/quotes', async (req, res) => {
   try{
@@ -325,6 +423,42 @@ app.post('/api/admin/quotes/:id/send', async (req, res) => {
     if(error) return res.status(500).json({ error: error.message });
     // TODO: enviar email
     res.json({ ok:true, token });
+  }catch(e){ res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/admin/login - returns JWT token when password correct
+app.post('/api/admin/login', (req, res) => {
+  try{
+    const { password } = req.body || {};
+    const envPass = process.env.ADMIN_PASSWORD || 'senha123';
+    if(!password) return res.status(400).json({ ok:false, error:'password required' });
+    if(password !== envPass) return res.status(401).json({ ok:false, error:'invalid password' });
+    const secret = APP_SECRET_SALT || 'dev_secret';
+    const token = jwt.sign({ role: 'admin' }, secret, { expiresIn: '8h' });
+    res.json({ ok:true, token });
+  }catch(e){ res.status(500).json({ ok:false, error: e.message }); }
+});
+
+// Public login endpoint (convenience) - returns JWT for admin password
+app.post('/api/login', (req, res) => {
+  try{
+    const { password } = req.body || {};
+    const envPass = process.env.ADMIN_PASSWORD || 'senha123';
+    if(!password) return res.status(400).json({ ok:false, error:'password required' });
+    if(password !== envPass) return res.status(401).json({ ok:false, error:'invalid password' });
+    const secret = APP_SECRET_SALT || 'dev_secret';
+    const token = jwt.sign({ role: 'admin' }, secret, { expiresIn: '8h' });
+    res.json({ ok:true, token });
+  }catch(e){ res.status(500).json({ ok:false, error: e.message }); }
+});
+
+// Diagnostic route - lista rotas registradas (apenas para desenvolvimento)
+app.get('/__routes', (req, res) => {
+  try{
+    const routes = (app._router && app._router.stack ? app._router.stack : [])
+      .filter(r => r.route && r.route.path)
+      .map(r => ({ path: r.route.path, methods: r.route.methods }));
+    res.json({ routes });
   }catch(e){ res.status(500).json({ error: e.message }); }
 });
 

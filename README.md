@@ -38,6 +38,12 @@ npm run dev
 npm run dev:server
 ```
 
+4. Alternativamente (novo): Rodar Next.js App Router (migrado)
+
+```powershell
+npm run next:dev
+```
+
 Protegendo rotas admin
 
 Defina `ADMIN_TOKEN` no ambiente (recomendado) e envie o header `x-admin-token: <token>` nas requisições administrativas. Alternativamente, defina `ADMIN_USERNAME` e `ADMIN_PASSWORD` e use Basic Auth.
