@@ -57,3 +57,12 @@ Próximos passos recomendados
 - Implementar autenticação de admin e proteção das rotas.
 - Adicionar testes automatizados e pipeline CI/CD.
 
+Segurança e deploy
+- Gere um `ADMIN_TOKEN` forte e configure-o como variável de ambiente no Vercel (`ADMIN_TOKEN`). Use o script `node scripts/generate_admin_token.js` para gerar um token.
+- Nunca coloque `SUPABASE_SERVICE_ROLE_KEY` no repositório. Armazene-a como Secret no provedor de hospedagem (Vercel, Heroku, etc.).
+- Para rotacionar a `SUPABASE_SERVICE_ROLE_KEY`: crie a nova chave no painel Supabase, atualize a variável no Vercel, e revogue a chave antiga.
+
+Scripts úteis
+- `node scripts/generate_admin_token.js` — gera um token administrador seguro.
+- `node scripts/smoke_test.js` — testa um endpoint (use `CHECK_URL` ou modifique para incluir header `x-admin-token`).
+

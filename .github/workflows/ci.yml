@@ -11,6 +11,40 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: npm ci
+      - name: Secrets scan
+        run: node scripts/check_secrets.js
+      - name: Build frontend
+        run: npm run build
+      - name: Optional smoke test (requires ADMIN_TOKEN secret)
+        if: ${{ secrets.ADMIN_TOKEN != '' }}
+        env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+        run: |
+          npm run dev:server &
+          # wait for server to boot (basic)
+          for i in {1..15}; do
+            curl -sSf http://localhost:4000/ && break || sleep 1;
+          done
+          npm run smoke
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:

@@ -5,10 +5,15 @@ export default function QuoteEditor(){
   const { id } = useParams();
   const [quote, setQuote] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [adminToken] = useState(()=> localStorage.getItem('adminToken') || '');
 
   useEffect(()=>{
-    if(id){ fetch(`/api/admin/quotes/${id}`).then(r=>r.json()).then(j=>setQuote(j.quote||null)); }
-  },[id]);
+    if(id){ 
+      const headers = { 'Content-Type':'application/json' };
+      if(adminToken) headers['x-admin-token'] = adminToken;
+      fetch(`/api/admin/quotes/${id}`, { headers }).then(r=>r.json()).then(j=>setQuote(j.quote||null)); 
+    }
+  },[id, adminToken]);
 
   function addItem(){
     setQuote(prev=> ({ ...prev, items: [...(prev.items||[]), { title:'Novo item', price:0, discount:0, quantity:1 }] }));
@@ -32,7 +37,9 @@ export default function QuoteEditor(){
       // ensure totals
       const totals = computeTotals(quote);
       const payload = { ...quote, subtotal: totals.subtotal, discount_total: totals.discount_total, total: totals.total, items: quote.items };
-      const res = await fetch(`/api/admin/quotes/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+      const headers = { 'Content-Type':'application/json' };
+      if(adminToken) headers['x-admin-token'] = adminToken;
+      const res = await fetch(`/api/admin/quotes/${id}`, { method:'PUT', headers, body: JSON.stringify(payload) });
       const j = await res.json();
       setQuote(j.quote);
       alert('Salvo');

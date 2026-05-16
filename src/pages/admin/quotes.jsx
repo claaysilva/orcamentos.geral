@@ -4,22 +4,41 @@ export default function AdminQuotes(){
   const [quotes, setQuotes] = useState([]);
   const [clients, setClients] = useState([]);
   const [form, setForm] = useState({ title:'', client_id:'' });
+  const [adminToken, setAdminToken] = useState(()=> localStorage.getItem('adminToken') || '');
 
-  useEffect(()=>{ fetch('/api/admin/quotes').then(r=>r.json()).then(j=>setQuotes(j.quotes||[])); fetch('/api/admin/clients').then(r=>r.json()).then(j=>setClients(j.clients||[])); },[]);
+  function authHeaders(){
+    const headers = { 'Content-Type':'application/json' };
+    const token = localStorage.getItem('adminToken');
+    if(token) headers['x-admin-token'] = token;
+    return headers;
+  }
+
+  useEffect(()=>{ 
+    fetch('/api/admin/quotes', { headers: authHeaders() }).then(r=>r.json()).then(j=>setQuotes(j.quotes||[])); 
+    fetch('/api/admin/clients', { headers: authHeaders() }).then(r=>r.json()).then(j=>setClients(j.clients||[])); 
+  },[]);
 
   async function create(){
     const payload = { title: form.title, client_id: form.client_id };
-    const res = await fetch('/api/admin/quotes', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    const res = await fetch('/api/admin/quotes', { method:'POST', headers: authHeaders(), body: JSON.stringify(payload) });
     const json = await res.json();
     if(json?.quote) setQuotes(prev=>[...prev, json.quote]);
+    else if(json?.error) alert('Erro: ' + json.error);
   }
 
   async function send(id){
-    const res = await fetch(`/api/admin/quotes/${id}/send`, { method:'POST' });
+    const res = await fetch(`/api/admin/quotes/${id}/send`, { method:'POST', headers: authHeaders() });
     const j = await res.json();
     if(j.ok) alert('Token gerado: ' + j.token);
+    else alert('Erro: ' + (j.error||''));
   }
 
+  async function remove(id){
+    if(!confirm('Excluir orçamento?')) return;
+    const res = await fetch(`/api/admin/quotes/${id}`, { method:'DELETE', headers: authHeaders() });
+    const j = await res.json();
+    if(j.ok) setQuotes(prev=>prev.filter(q=>q.id!==id)); else alert('Erro: ' + (j.error||''));
+  }
   return (
     <div style={{padding:20}}>
       <h2>Orçamentos</h2>
@@ -34,7 +53,7 @@ export default function AdminQuotes(){
 
       <ul>
         {quotes.map(q=> (
-          <li key={q.id}>{q.title} — {q.client_id} — <a href={`#/admin/quote/${q.id}`}>Abrir</a> — <button onClick={()=>send(q.id)}>Enviar</button></li>
+          <li key={q.id}>{q.title} — {q.client_id} — <a href={`/admin/quote/${q.id}`}>Abrir</a> — <button onClick={()=>send(q.id)}>Enviar</button> — <button onClick={()=>remove(q.id)}>Excluir</button></li>
         ))}
       </ul>
     </div>

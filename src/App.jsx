@@ -257,6 +257,9 @@ export default function App(){
         <button id="btext" className={"btn" + (mode==='outline'? ' active':'')} onClick={()=>setMode('outline')}>Modo Texto</button>
         <button id="bval" className={"btn" + (mode==='values'? ' active':'')} onClick={()=>setMode('values')}>Valores</button>
         <div className="tb-sep"></div>
+        <a href="/public/access" className="hint" style={{marginRight:12}}>Acessar por CNPJ</a>
+        <a href="/admin/clients" className="hint">Área Admin</a>
+        <div className="tb-sep"></div>
         <span className="hint">Clique direito = opções</span>
         <div className="tb-sep"></div>
         <button id="bexp" className={"btn hide-mobile"} onClick={expandAll}>Expandir</button>

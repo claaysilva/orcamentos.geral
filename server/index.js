@@ -107,6 +107,45 @@ app.get('/api/admin/clients', async (req, res) => {
   }
 });
 
+// PUT /api/admin/clients/:id
+app.put('/api/admin/clients/:id', async (req, res) => {
+  try{
+    const id = req.params.id;
+    const payload = req.body;
+    if(useFallback){
+      const idx = storage.clients.findIndex(x=>x.id===id);
+      if(idx===-1) return res.status(404).json({ error:'not found' });
+      storage.clients[idx] = { ...storage.clients[idx], ...payload, updated_at: new Date().toISOString() };
+      persistStorage();
+      return res.json({ client: { id: storage.clients[idx].id, name: storage.clients[idx].name, contact_email: storage.clients[idx].contact_email } });
+    }
+    const { data, error } = await supa.from('clients').update(payload).eq('id', id).select('id,name,contact_email').single();
+    if(error) return res.status(500).json({ error: error.message });
+    res.json({ client: data });
+  }catch(err){ res.status(500).json({ error: err.message }); }
+});
+
+// DELETE /api/admin/clients/:id
+app.delete('/api/admin/clients/:id', async (req, res) => {
+  try{
+    const id = req.params.id;
+    if(useFallback){
+      storage.clients = storage.clients.filter(x=>x.id!==id);
+      // also remove related quotes and items
+      storage.quotes = storage.quotes.filter(q=>q.client_id!==id);
+      storage.quote_items = storage.quote_items.filter(i=>{ return !storage.quotes.find(q=>q.id===i.quote_id) });
+      persistStorage();
+      return res.json({ ok:true });
+    }
+    const { error } = await supa.from('clients').delete().eq('id', id);
+    if(error) return res.status(500).json({ error: error.message });
+    // remove related quotes/items (simple approach)
+    await supa.from('quotes').delete().eq('client_id', id);
+    await supa.from('quote_items').delete().in('quote_id', (await supa.from('quotes').select('id')).data.map(x=>x.id));
+    res.json({ ok:true });
+  }catch(err){ res.status(500).json({ error: err.message }); }
+});
+
 // POST /api/admin/clients
 app.post('/api/admin/clients', async (req, res) => {
   try{
