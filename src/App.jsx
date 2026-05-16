@@ -83,6 +83,10 @@ function Values({data}){
   const subtotal = rows.reduce((s,r)=> s + Math.max(0, toNumber(r.value) - toNumber(r.discount)),0) + extras.reduce((s,e)=> s + Math.max(0, toNumber(e.value) - toNumber(e.discount)),0)
   const discount = 150
   const total = Math.max(subtotal - discount,0)
+  const itemDiscountSum = rows.reduce((s,r)=> s + toNumber(r.discount),0)
+  const extrasDiscountSum = extras.reduce((s,e)=> s + toNumber(e.discount||0),0)
+  const totalItemDiscounts = itemDiscountSum + extrasDiscountSum
+  const totalDiscountsApplied = totalItemDiscounts + discount
   const projectPayment = { value: 'R$ 2.650', plan: '1x R$ 550 + 3x R$ 700' }
   return (
     <div id="valuesInner" className="view-inner">
@@ -105,8 +109,10 @@ function Values({data}){
             <div className="val-value">{ex.value}</div>
           </div>
         ))}
-        <div className="val-row total"><div className="val-label">Subtotal</div><div className="val-value">R$ {subtotal}</div></div>
+        <div className="val-row total"><div className="val-label">Subtotal (após descontos itens)</div><div className="val-value">R$ {subtotal}</div></div>
+        <div className="val-row"><div className="val-label">Descontos (itens)</div><div className="val-value">- R$ {totalItemDiscounts}</div></div>
         <div className="val-row"><div className="val-label">Desconto pacote completo</div><div className="val-value">- R$ {discount}</div></div>
+        <div className="val-row"><div className="val-label">Total descontos aplicados</div><div className="val-value">- R$ {totalDiscountsApplied}</div></div>
         <div className="val-row total"><div className="val-label">Total com desconto</div><div className="val-value">R$ {total}</div></div>
         <div style={{height:10}} />
         <div className="val-row"><div className="val-label">Pagamento (projeto): {projectPayment.plan}</div><div className="val-value">{projectPayment.value}</div></div>
