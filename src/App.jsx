@@ -46,7 +46,12 @@ function OutlineNode({node, level, onToggle}){
         ) : (
           <div style={{width:'18px', flexShrink:0}} />
         )}
-        <div className="ol-text">{cleanText(node.text)}</div>
+        <div className="ol-text">
+          {cleanText(node.text)}
+          {node.status || node.estimate ? (
+            <span className="item-meta"> — <em className="status">{node.status || ''}</em>{node.estimate ? ` • ${node.estimate}` : ''}</span>
+          ) : null}
+        </div>
       </div>
       {hasChildren && !node.collapsed && (
         <div className="ol-children">
@@ -68,46 +73,76 @@ function Outline({data, onToggle}){
 }
 
 function Values({data}){
-  const fixedValues = {
-    q1: 'R$ 350', s1: 'R$ 500', f1: 'R$ 400', n1: 'R$ 400', p1: 'R$ 400', d1: 'R$ 300', c1: 'R$ 300'
+  const toNumber = v => {
+    if(typeof v === 'number') return v
+    return Number(String(v).replace(/[^0-9]/g,'')) || 0
   }
-  const discounts = {
-    s1: 'R$ 150',
-    f1: 'R$ 50',
-    n1: 'R$ 50',
-    d1: 'R$ 100'
-  }
-  const extras = [{ label: 'API Oficial + Site institucional (Concluido, falta apenas pagar)', value: 'R$ 650', discount: 'R$ 150' }]
-  const toNumber = v=> Number(String(v).replace(/[^0-9]/g,''))||0
-  const rows = data.children.map(c=>({label:cleanText(c.text), value: fixedValues[c.id]||'', discount: discounts[c.id]||''}))
-    const subtotalReal = rows.reduce((s,r)=> s + toNumber(r.value),0) + extras.reduce((s,e)=> s + toNumber(e.value),0)
-    const itemDiscountSum = rows.reduce((s,r)=> s + toNumber(r.discount),0)
-    const extrasDiscountSum = extras.reduce((s,e)=> s + toNumber(e.discount||0),0)
-    const packageDiscount = 150
-    const totalDiscounts = itemDiscountSum + extrasDiscountSum + packageDiscount
-    const total = Math.max(subtotalReal - totalDiscounts,0)
-  
-  const projectPayment = { value: 'R$ 2.650', plan: '1x R$ 550 + 3x R$ 700' }
+
+  const meta = data.meta || {}
+  const extras = meta.extras || []
+  const rows = (data.children || []).map(c => ({
+    id: c.id,
+    label: cleanText(c.text),
+    value: c.price || 0,
+    discount: c.discount || 0,
+    status: c.status || '',
+    estimate: c.estimate || '',
+    included: c.included || [],
+    excluded: c.excluded || []
+  }))
+
+  const subtotalReal = rows.reduce((s,r)=> s + toNumber(r.value),0) + extras.reduce((s,e)=> s + toNumber(e.price),0)
+  const totalDiscounts = rows.reduce((s,r)=> s + toNumber(r.discount),0) + extras.reduce((s,e)=> s + toNumber(e.discount||0),0)
+  const total = Math.max(subtotalReal - totalDiscounts,0)
+
+  const projectPayment = { value: meta.total || 'R$ 0', plan: meta.condicoes || '' }
+
   return (
     <div id="valuesInner" className="view-inner">
       <div className="val-wrap">
+        <div className="summary">
+          <div className="meta-row"><div className="meta-label">Total</div><div className="meta-value">{meta.total}</div></div>
+          <div className="meta-row"><div className="meta-label">Prazo</div><div className="meta-value">{meta.prazo}</div></div>
+          <div className="meta-row"><div className="meta-label">Condições</div><div className="meta-value">{meta.condicoes}</div></div>
+          <div className="meta-row"><div className="meta-label">Validade</div><div className="meta-value">{meta.validade}</div></div>
+        </div>
+
         {rows.map((r,idx)=>(
-          <div className={'val-row val-level-1'} key={idx}>
-            <div className="val-label">{r.label}</div>
-            <div className="val-value">{r.value}</div>
+          <div className={'val-row val-level-1'} key={r.id || idx}>
+            <div>
+              <div className="val-label">{r.label} <small className="item-small">{r.status}{r.estimate?` • ${r.estimate}`:''}</small></div>
+              {r.included && r.included.length? <div className="item-included">Incluso: {r.included.join(', ')}</div> : null}
+              {r.excluded && r.excluded.length? <div className="item-excluded">Fora do escopo: {r.excluded.join(', ')}</div> : null}
+            </div>
+            <div className="val-value">R$ {toNumber(r.value)}</div>
           </div>
         ))}
+
         {extras.map((ex,i)=> (
           <div className={'val-row val-level-1'} key={'ex'+i}>
-            <div className="val-label">{ex.label}</div>
-            <div className="val-value">{ex.value}</div>
+            <div className="val-label">{ex.label} <small className="item-small">{ex.status}{ex.estimate?` • ${ex.estimate}`:''}</small></div>
+            <div className="val-value">R$ {toNumber(ex.price)}</div>
           </div>
         ))}
+
         <div className="val-row total"><div className="val-label">Subtotal</div><div className="val-value">R$ {subtotalReal}</div></div>
         <div className="val-row"><div className="val-label">Total descontos</div><div className="val-value">- R$ {totalDiscounts}</div></div>
         <div className="val-row total"><div className="val-label">Total com desconto</div><div className="val-value">R$ {total}</div></div>
+
         <div style={{height:10}} />
+
         <div className="val-row"><div className="val-label">Pagamento (projeto): {projectPayment.plan}</div><div className="val-value">{projectPayment.value}</div></div>
+
+        <div style={{height:18}} />
+        <div className="section-title">Próximos passos</div>
+        <div className="next-steps">{(meta.nextSteps||[]).map((s,i)=> <div key={i}>• {s}</div>)}</div>
+
+        <div style={{height:10}} />
+        <div className="section-title">Premissas e escopo excluído</div>
+        <div className="assumptions">
+          <div><strong>Premissas:</strong> {(meta.assumptions||[]).join(' • ')}</div>
+          <div><strong>Fora do escopo:</strong> {(meta.excludedScope||[]).join(' • ')}</div>
+        </div>
       </div>
     </div>
   )

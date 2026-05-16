@@ -1,9 +1,21 @@
 export const DATA = {
   id: 'root',
   text: 'Implementação GHL\nDr Keoma',
+  meta: {
+    total: 'R$ 2.650',
+    prazo: '6 semanas (estimado)',
+    condicoes: '1x R$ 550 + 3x R$ 700',
+    validade: '15 dias',
+    nextSteps: ['Aprovação', 'Kickoff', 'Envio da fatura'],
+    assumptions: ['Acesso ao GHL fornecido', 'Templates aprovados pelo cliente'],
+    excludedScope: ['Desenvolvimento de conteúdo de terceiros', 'Compra de serviços de terceiro'],
+    extras: [
+      { id: 'api_official', label: 'API Oficial + Site institucional', price: 650, discount: 150, status: 'Concluido', estimate: '2 semanas' }
+    ]
+  },
   collapsed: false,
   children: [
-    { id: 'q1', text: '1. Qualificação Automática', collapsed: false, pal: 0, children: [
+    { id: 'q1', text: '1. Qualificação Automática', collapsed: false, pal: 0, price: 350, discount: 0, status: 'Concluido', estimate: '1 semana', included: ['Campos customizados','Perguntas de qualificação'], excluded: [], children: [
       { id: 'q1a', text: 'Workflow: Menu Inicial', collapsed: true, children: [
         { id: 'q1a1', text: 'Trigger: Novo contato WhatsApp', collapsed: true, children: [] },
         { id: 'q1a2', text: 'Mensagem boas-vindas + menu', collapsed: true, children: [] },
@@ -34,7 +46,7 @@ export const DATA = {
         { id: 'q1d6', text: 'Futura automação por IA', collapsed: true, children: [] }
       ] }
     ] },
-    { id: 's1', text: '2. Disparos', collapsed: false, pal: 1, children: [
+    { id: 's1', text: '2. Disparos', collapsed: false, pal: 1, price: 500, discount: 150, status: 'Planejado', estimate: '1-2 semanas', included: ['Templates aprovados','Rate limit'], excluded: ['Segmentação avançada (opcional)'], children: [
       { id: 's1a', text: 'Workflow: Disparo programado', collapsed: true, children: [
         { id: 's1a1', text: 'Trigger: agendamento/horário', collapsed: true, children: [] },
         { id: 's1a2', text: 'Segmentação por tag/segmento', collapsed: true, children: [] },
@@ -49,7 +61,7 @@ export const DATA = {
         { id: 's1c2', text: 'Relatórios de entregabilidade', collapsed: true, children: [] }
       ] }
     ] },
-    { id: 'f1', text: '3. Follow-up Automático', collapsed: false, pal: 1, children: [
+    { id: 'f1', text: '3. Follow-up Automático', collapsed: false, pal: 1, price: 400, discount: 50, status: 'Planejado', estimate: '1 semana', included: ['Templates 4h/1D/3D'], excluded: [], children: [
       { id: 'f1a', text: 'Workflow: Follow-up 4h', collapsed: true, children: [
         { id: 'f1a1', text: 'Trigger: 4h sem resposta', collapsed: true, children: [] },
         { id: 'f1a2', text: 'Condição: status_conversa = aberta', collapsed: true, children: [] },
@@ -85,7 +97,7 @@ export const DATA = {
         { id: 'f1e4', text: 'Respeitar horário comercial (7h-19h)', collapsed: true, children: [] }
       ] }
     ] },
-    { id: 'n1', text: '5. Nutrição/Reativação', collapsed: false, pal: 2, children: [
+    { id: 'n1', text: '5. Nutrição/Reativação', collapsed: false, pal: 2, price: 400, discount: 50, status: 'Planejado', estimate: '2-3 semanas', included: ['Sequências 15/18/21/60D'], excluded: [], children: [
       { id: 'n1a', text: 'Workflow: Nutrição 15D', collapsed: true, children: [
         { id: 'n1a1', text: 'Trigger: 15 dias sem decisão', collapsed: true, children: [] },
         { id: 'n1a2', text: 'Condição: NÃO está em "Ganho"', collapsed: true, children: [] },
@@ -115,7 +127,7 @@ export const DATA = {
         { id: 'n1e4', text: 'FAQ: dúvidas mais comuns', collapsed: true, children: [] }
       ] }
     ] },
-    { id: 'p1', text: '7. Pipeline Automático', collapsed: false, pal: 3, children: [
+    { id: 'p1', text: '7. Pipeline Automático', collapsed: false, pal: 3, price: 400, discount: 0, status: 'Planejado', estimate: '1-2 semanas', included: ['Stages básicos','Automações de movimentação'], excluded: [], children: [
       { id: 'p1a', text: 'Pipeline: Comercial', collapsed: true, children: [
         { id: 'p1a1', text: 'Stage: Base (entrada)', collapsed: true, children: [] },
         { id: 'p1a2', text: 'Stage: Primeiro Contato', collapsed: true, children: [] },
@@ -147,7 +159,7 @@ export const DATA = {
         { id: 'p1d4', text: 'Pagamento pendente → lembra diariamente', collapsed: true, children: [] }
       ] }
     ] },
-    { id: 'd1', text: 'Dashboards e Relatórios', collapsed: false, pal: 3, children: [
+    { id: 'd1', text: 'Dashboards e Relatórios', collapsed: false, pal: 3, price: 300, discount: 100, status: 'Planejado', estimate: '2 semanas', included: ['Métricas chave','Performance equipe'], excluded: [], children: [
       { id: 'd1a', text: 'Métricas de Conversão', collapsed: true, children: [
         { id: 'd1a1', text: 'Taxa conversão por etapa', collapsed: true, children: [] },
         { id: 'd1a2', text: 'Tempo médio em cada stage', collapsed: true, children: [] },
@@ -164,7 +176,7 @@ export const DATA = {
         { id: 'd1c3', text: 'Oportunidades de melhoria', collapsed: true, children: [] }
       ] }
     ] },
-    { id: 'c1', text: 'Configurações Técnicas', collapsed: false, pal: 4, children: [
+    { id: 'c1', text: 'Configurações Técnicas', collapsed: false, pal: 4, price: 300, discount: 0, status: 'Planejado', estimate: '1 semana', included: ['WhatsApp API','Permissões'], excluded: [], children: [
       { id: 'c1a', text: 'WhatsApp Business API', collapsed: true, children: [
         { id: 'c1a1', text: 'Verificar número no Meta BM', collapsed: true, children: [] },
         { id: 'c1a2', text: 'Conectar ao GHL', collapsed: true, children: [] },
