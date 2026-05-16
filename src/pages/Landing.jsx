@@ -1,8 +1,11 @@
 import { useEffect } from 'react'
-import { useRouter } from 'next/router'
 
 export default function Landing(){
-  const router = useRouter()
-  useEffect(()=>{ router.replace('/') },[router])
+  useEffect(()=>{
+    try{
+      const host = window.location.hostname || 'localhost'
+      window.location.replace(`http://${host}:3000/`)
+    }catch(e){ }
+  },[])
   return null
 }

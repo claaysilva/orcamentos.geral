@@ -1,8 +1,11 @@
 import { useEffect } from 'react'
-import { useRouter } from 'next/router'
 
 export default function AdminClients(){
-  const router = useRouter()
-  useEffect(()=>{ router.replace('/admin/clients') },[router])
+  useEffect(()=>{
+    try{
+      const host = window.location.hostname || 'localhost'
+      window.location.replace(`http://${host}:3000/admin/clients`)
+    }catch(e){ /* ignore */ }
+  },[])
   return null
 }
