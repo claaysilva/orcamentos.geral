@@ -48,8 +48,8 @@ function OutlineNode({node, level, onToggle}){
         )}
         <div className="ol-text">
           {cleanText(node.text)}
-          {node.status || node.estimate ? (
-            <span className="item-meta"> — <em className="status">{node.status || ''}</em>{node.estimate ? ` • ${node.estimate}` : ''}</span>
+          {node.estimate ? (
+            <span className="item-meta"> — <em className="estimate">{node.estimate}</em></span>
           ) : null}
         </div>
       </div>
@@ -111,8 +111,6 @@ function Values({data}){
           <div className={'val-row val-level-1'} key={r.id || idx}>
             <div>
               <div className="val-label">{r.label} <small className="item-small">{r.status}{r.estimate?` • ${r.estimate}`:''}</small></div>
-              {r.included && r.included.length? <div className="item-included">Incluso: {r.included.join(', ')}</div> : null}
-              {r.excluded && r.excluded.length? <div className="item-excluded">Fora do escopo: {r.excluded.join(', ')}</div> : null}
             </div>
             <div className="val-value">R$ {toNumber(r.value)}</div>
           </div>
@@ -133,16 +131,7 @@ function Values({data}){
 
         <div className="val-row"><div className="val-label">Pagamento (projeto): {projectPayment.plan}</div><div className="val-value">{projectPayment.value}</div></div>
 
-        <div style={{height:18}} />
-        <div className="section-title">Próximos passos</div>
-        <div className="next-steps">{(meta.nextSteps||[]).map((s,i)=> <div key={i}>• {s}</div>)}</div>
-
-        <div style={{height:10}} />
-        <div className="section-title">Premissas e escopo excluído</div>
-        <div className="assumptions">
-          <div><strong>Premissas:</strong> {(meta.assumptions||[]).join(' • ')}</div>
-          <div><strong>Fora do escopo:</strong> {(meta.excludedScope||[]).join(' • ')}</div>
-        </div>
+        {/* Próximos passos, premissas e escopo excluído agora aparecem apenas no modo texto (Outline) */}
       </div>
     </div>
   )
